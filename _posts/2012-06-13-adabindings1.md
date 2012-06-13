@@ -99,7 +99,8 @@ Here are some reasons why you may _not_ want to write a thick binding:
    When you write a thin binding, the libraries' documentation suffices for using your
    binding.
  * You can autogenerate a thin binding from the libraries' C header with [Swig][3].
-   Writing a thick binding is much more work.
+   The GNAT compiler is also able to automatically create Ada bindings with
+   [`-fdump-ada-spec`][4]. Writing a thick binding is much more work.
 
 This concludes my thoughts on thin vs. thick bindings.  In the next post, I will
 actually show how to write some code.
@@ -109,3 +110,4 @@ To be continued...
 [1]: http://flyx86.github.com/OpenCLAda/
 [2]: http://flyx86.github.com/OpenGLAda/
 [3]: http://gnuada.svn.sourceforge.net/viewvc/gnuada/trunk/projects/swig-1.3.35/
+[4]: http://www.adacore.com/adaanswers/gems/gem-59/
