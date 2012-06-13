@@ -1,4 +1,5 @@
 url: http://flyx.org
 pygments: true
 permalink: pretty
+future: false
 paginate: 2

@@ -8,7 +8,7 @@ html {
 	background-image: -o-linear-gradient(top, #abc, #678);
 	background-image: -moz-linear-gradient(top, #abc, #678);
 	background-image: -ms-linear-gradient(top, #abc, #678);
-	height: 100%;
+	min-height: 100%;
 }
 
 h1, h2 {
@@ -172,7 +172,7 @@ footer a:visited {
 
 .box {
 	margin-bottom: 1em;
-	padding: 0.6em;
+	padding: 1em;
 	width: 760px;
 	
 	box-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
@@ -184,7 +184,7 @@ footer a:visited {
 
 .frame {
 	margin-bottom: 1em;
-	padding: 0.8em;
+	padding: 1em;
 	min-height: 500px;
 	width: 760px;
 	
