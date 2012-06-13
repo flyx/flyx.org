@@ -1,0 +1,6 @@
+<article class="box post">
+   <p class="post_date">{{ post.date | date: '%d.%m.%Y' }}</p>
+   <h2><a href="{{ post.url }}" title="Permalink">{{ post.title }}</a></h2>
+   
+   {{ current_content }}
+</article>

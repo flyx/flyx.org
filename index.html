@@ -1,0 +1,33 @@
+---
+layout: default
+title: Home
+---
+
+{% for post in paginator.posts %}
+   {% assign current_content = post.content %}
+   {% include post.html %}
+{% endfor %}
+
+<div id="pagination">
+   <p>
+      <span id="previous">
+         {% if paginator.previous_page %}
+            {% if paginator.previous_page == 1 %}
+               <a href="/">Previous</a>
+            {% else %}
+               <a href="/page{{paginator.previous_page}}">Previous</a>
+            {% endif %}
+         {% else %}
+          <span>Previous</span>
+        {% endif %}
+      </span>
+      Page {{paginator.page}} of {{paginator.total_pages}}
+      <span id="next">
+         {% if paginator.next_page %}
+            <a href="/page{{paginator.next_page}}">Next</a>
+         {% else %}
+            <span>Next</span>
+         {% endif %}
+      </<span>
+   </p>
+</div>

@@ -1,0 +1,8 @@
+{% capture wrapped_content %}
+   {% assign post = page %}
+   {% assign current_content = content %}
+   <div id="content">
+      {% include post.html %}
+   </div>
+{% endcapture %}
+{% include html.html %}

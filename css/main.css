@@ -1,0 +1,240 @@
+/******************
+ GLOBAL
+******************/
+
+html {
+	background-image: linear-gradient(top, #abc, #678);
+	background-image: -webkit-linear-gradient(top, #abc, #678);
+	background-image: -o-linear-gradient(top, #abc, #678);
+	background-image: -moz-linear-gradient(top, #abc, #678);
+	background-image: -ms-linear-gradient(top, #abc, #678);
+	height: 100%;
+}
+
+h1, h2 {
+	margin: 0;
+}
+
+article {
+	background: white;
+}
+
+a:link,
+a:hover,
+a:active,
+a:visited {
+	text-decoration: underline;
+	color: #028;
+}
+
+li {
+	margin-top: 0.35em;
+	margin-bottom: 0.35em;
+}
+
+#main {
+	width: 960px;
+	white-space: nowrap;
+	margin-left: auto;
+	margin-right: auto;
+	padding-bottom: 2em;;
+}
+
+/******************
+ HEADER
+******************/
+
+header {
+	width: 100%;
+	text-align: center;
+	font-family: Courier,monospace;
+	margin-bottom: 2em;
+	margin-top: 0.5em;
+}
+
+header a:link,
+header a:hover,
+header a:active,
+header a:visited {
+	color: inherit;
+	text-decoration: inherit;
+}
+
+h1 a:link,
+h1 a:hover,
+h1 a:active,
+h1 a:visited {
+	text-decoration: inherit;
+	color: inherit;
+}
+
+/******************
+ NAVIGATION
+******************/
+
+#archive ul {
+	font-size: small;
+}
+
+nav {
+	float: left;
+	width: 170px;
+	white-space: normal;
+}
+
+nav h3,
+nav h4 {
+	margin-top: 0.2em;
+	margin-bottom: 0.2em;
+}
+
+nav ul {
+	list-style-type: none;
+	padding-left: 1em;
+}
+
+#navigation li {
+	margin: 0;
+}
+
+#navigation a {
+	display: block;
+	height: 1.8em;
+	line-height: 1.8em;
+	padding-right: 0.6em;
+}
+
+#navigation a:link,
+#navigation a:visited {
+	color: black;
+	text-decoration: none;
+}
+
+#navigation a:hover {
+	color: black;
+	text-decoration: none;
+	background: #78a;
+}
+
+#navigation a:active {
+	color: black;
+	text-decoration: none;
+	background: #569;
+}
+
+/******************
+ FOOTER
+******************/
+
+footer {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 2em;
+	line-height: 2em;
+}
+
+footer div {
+	width: 22em;
+	margin-left: auto;
+	margin-right: auto;
+	color: #a5a5a5;
+	background: rgba(0, 0, 0, 0.75);
+	border-radius: 10px 10px 0 0;
+	-moz-border-radius: 10px 10px 0 0;
+	-webkit-border-radius: 10px 10px 0 0;
+	text-align: center;
+	font-family: Courier,monospace;
+}
+
+footer p {
+	margin: 0;
+}
+
+footer a:link,
+footer a:hover,
+footer a:active,
+footer a:visited {
+	color: inherit;
+	text-decoration: underline;
+	font-weight: bold;
+}
+
+/******************
+ CONTENT WRAPPING
+******************/
+
+#content {
+	display: inline-block;
+	white-space: normal;
+}
+
+.box {
+	margin-bottom: 1em;
+	padding: 0.6em;
+	width: 760px;
+	
+	box-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
+	-webkit-box-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
+	-o-box-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
+	-moz-box-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
+	-ms-box-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
+}
+
+.frame {
+	margin-bottom: 1em;
+	padding: 0.8em;
+	min-height: 500px;
+	width: 760px;
+	
+	box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85);
+	-webkit-box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85);
+	-o-box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85);
+	-moz-box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85);
+	-ms-box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85);
+}
+
+#previous {
+	display: inline-block;
+	float: left;
+	margin-left: 1em;
+}
+
+#next {
+	display: inline-block;
+	float: right;
+	margin-right: 1em;
+}
+
+#pagination p {
+	width: 100%;
+	text-align: center;
+}
+
+/******************
+ POSTS
+******************/
+
+.post h2 a:link,
+.post h2 a:hover,
+.post h2 a:active,
+.post h2 a:visited {
+	text-decoration: none;
+	color: black;
+}
+
+.post h2 {
+	margin-bottom: 0.5em;
+}
+
+.post_date {
+	margin: 0;
+	float: right;
+}
+
+.post img {
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+}
