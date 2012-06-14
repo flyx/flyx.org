@@ -105,9 +105,10 @@ Here are some reasons why you may _not_ want to write a thick binding:
 This concludes my thoughts on thin vs. thick bindings.  In the next post, I will
 actually show how to write some code.
 
-To be continued...
+[To be continued...][5]
 
 [1]: http://flyx86.github.com/OpenCLAda/
 [2]: http://flyx86.github.com/OpenGLAda/
 [3]: http://gnuada.svn.sourceforge.net/viewvc/gnuada/trunk/projects/swig-1.3.35/
 [4]: http://www.adacore.com/adaanswers/gems/gem-59/
+[5]: /2012/06/14/adabindings2/

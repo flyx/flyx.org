@@ -9,6 +9,7 @@ html {
 	background-image: -moz-linear-gradient(top, #abc, #678);
 	background-image: -ms-linear-gradient(top, #abc, #678);
 	min-height: 100%;
+	position: relative;
 }
 
 h1, h2 {
@@ -127,7 +128,7 @@ nav ul {
 ******************/
 
 footer {
-	position: fixed;
+	position: absolute;
 	left: 0;
 	right: 0;
 	bottom: 0;
