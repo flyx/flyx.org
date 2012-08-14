@@ -1,12 +1,12 @@
 ---
 layout: post
-title: Writing application in Ada with ada-bundler
+title: Writing applications in Ada with ada-bundler
 tags: [ada, programming]
 ---
 
 Cross-platform development of desktop applications is a tedious business. You can
 compile simple Ada code without modifications on any platform that's supported by
-your compiler, but as soon as you start developing desktop application (usually
+your compiler, but as soon as you start developing desktop applications (usually
 with a GUI), you need to implement quite some platform-specific behaviour. In this
 post, I present **ada-bundler**, a low-level library and tool for cross-platform file
 access that aims to make your life easier a bit.
@@ -39,7 +39,7 @@ a look at some example code.
 
 Consider you have an application named *Example*. This application needs two
 data files and a configuration file which should be bundled with it. We start with
-write the ada-bundler configuration for this application. The ada-bundler
+writing the ada-bundler configuration for this application. The ada-bundler
 configuration file is a [YAML][1] file. Let's see how it looks:
 
 {% highlight yaml %}
@@ -55,7 +55,7 @@ configuration:
 
 The contents is quite straight forward: Firstly, you define the name and the version
 number of your application. Then, you tell ada-bundler where to find the primary
-executable file. After that comes the payload: You tell ada-bundler which resources
+executable file. After that comes the payload: You tell ada-bundler which resource
 files should be bundled with your application. The items are paths relative to the
 current directory (i.e. the directory where you run ada-bundler from; that should
 usually be the directory where the ada-bundler configuration file is located).
@@ -162,7 +162,7 @@ When you call GPRBuild, you have to specify the target platform by setting the
     $ gprbuild example.gpr -Xpackaging=MacOSX
 
 Possible values are `MacOSX`, `Windows` and `Linux_Universal`. The latter one is
-named like this because I may possible add support for RPM and / or DEB packages
+named like this because I may possibly add support for RPM and / or DEB packages
 in the future.
 
 #### Using the ada-bundler tool
@@ -207,13 +207,13 @@ clean:
 
 ada-bundler is not a GUI library. To write a cross-platform desktop application
 with a graphical user interface, you need a library like [GTK][3] or [Qt][4]. There
-are Ada bindings for both libaries. A promising new Ada project aiming to provide
+are Ada bindings for both libaries. A promising Ada project aiming to provide
 a user interface library is [Lumen][5]. If you want to create an OpenGL-based
 application, you can use [AdaOpenGL][6].
 
 If your application has dependencies on dynamic libraries, you may need to bundle
 them with your application. This is currently not possible, it will need some
-planning and diving into the linux packaging systems, because a RPM / DEB backend
+planning and diving into the linux packaging systems, because an RPM / DEB backend
 probably wants to add dependencies to the packages your application depends on
 instead of bundling the libraries.
 
