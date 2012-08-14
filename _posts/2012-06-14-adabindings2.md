@@ -4,7 +4,7 @@ title: Writing Ada Bindings for C Libraries, Part 2
 tags: [ada, programming]
 ---
 
-[Recently...][1]
+[Previously...][1]
 
 ### Types and Conventions
 
@@ -195,7 +195,7 @@ record, the array is passed by-reference. If the array has the Convention `C`,
 this is equivalent to passing a reference to the first array element.
 
 Also note that the return value is always passed by-value, so we can use
-`Image_Format` here without using `C_Pass_By_Value`.
+`Image_Format` here without using `C_Pass_By_Copy`.
 
 #### Import Statements
 
