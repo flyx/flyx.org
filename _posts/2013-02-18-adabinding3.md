@@ -28,7 +28,7 @@ pointer to a subprogram.
 
 There are several possibilities to wrap this function in Ada:
 
-#### Import it multiple times with different signatures:
+#### Import it multiple times with different signatures
    
 {% highlight ada %}
 package C renames Interfaces.C;
@@ -48,7 +48,7 @@ The Import pragma will be applied to all functions that match the given name. Wh
 works, it does not give us type safety: If the user calls the wrong function, he gets a
 function reference back that will not work as expected.
 
-#### Wrap the C function:
+#### Wrap the C function
    
    {% highlight ada %}
    function Backend (Func_Name : C.char_array) return System.Address;
