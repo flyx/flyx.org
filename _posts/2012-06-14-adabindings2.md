@@ -218,6 +218,7 @@ imported as the specified C procedure.
 This concludes the second part of this series. See you again when I cover some
 advanced topics like handling void pointers and bitfields.
 
-To be continued...
+[To be continued...][2]
 
 [1]: /2012/06/13/adabindings1/
+[2]: /2013/02/18/adabindings3/
