@@ -50,32 +50,32 @@ function reference back that will not work as expected.
 
 #### Wrap the C function
    
-   {% highlight ada %}
-   function Backend (Func_Name : C.char_array) return System.Address;
-   pragma Import (Convention => C, Entity => Backend,
-                  External_Name => "clGetExtensionFunctionAddress");
-   
-   generic
-      type Return_Type is private;
-      Function_Name : String;
-   function Get_Extension_Function_Address return Return_Type is
-      function Convert is new Ada.Unchecked_Conversion (System.Address, Return_Type);
-   begin
-      return Convert (Backend (C.To_C (Function_Name)));
-   end Get_Extension_Function_Address;
-   function Get_Func1 is new Get_Extension_Function_Address
-     (Func_Type1, "func1");
-   function Get_Func2 is new Get_Extension_Function_Address
-     (Func_Type2, "func2");
-   {% endhighlight %}
-   
-   Obviously, you want to expose just the last two functions to the caller. As you cannot
-   implement a declaration made in a package specification by a generic instantiation,
-   you have to use `renames` to do that:
-   
-   {% highlight ada %}
-   function Get_Func1_Public return Func_Type1 renames Get_Func1;
-   {% endhighlight %}
+{% highlight ada %}
+function Backend (Func_Name : C.char_array) return System.Address;
+pragma Import (Convention => C, Entity => Backend,
+               External_Name => "clGetExtensionFunctionAddress");
+
+generic
+   type Return_Type is private;
+   Function_Name : String;
+function Get_Extension_Function_Address return Return_Type is
+   function Convert is new Ada.Unchecked_Conversion (System.Address, Return_Type);
+begin
+   return Convert (Backend (C.To_C (Function_Name)));
+end Get_Extension_Function_Address;
+function Get_Func1 is new Get_Extension_Function_Address
+  (Func_Type1, "func1");
+function Get_Func2 is new Get_Extension_Function_Address
+  (Func_Type2, "func2");
+{% endhighlight %}
+
+Obviously, you want to expose just the last two functions to the caller. As you cannot
+implement a declaration made in a package specification by a generic instantiation,
+you have to use `renames` to do that:
+
+{% highlight ada %}
+function Get_Func1_Public return Func_Type1 renames Get_Func1;
+{% endhighlight %}
 
 #### Provide a generic interface
 ... so the caller can define the type he wants to use. This is useful in cases like this:
