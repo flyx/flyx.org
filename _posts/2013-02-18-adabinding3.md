@@ -26,7 +26,7 @@ a pointer to a subprogram specified with *func_name*. So there is a fixed set of
 values for *func_name*, and for every value, the function may return a differently typed
 pointer to a subprogram.
 
-There are several possibilities to wrap this function in Ada:
+There are several possibilities to wrap C functions taking void pointers in Ada:
 
 #### Import it multiple times with different signatures
    
