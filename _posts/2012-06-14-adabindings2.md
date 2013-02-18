@@ -67,7 +67,7 @@ to use a representation clause on the record.
 #### Arrays
 
 In C, arrays are mostly syntactic sugar for pointers, particularly when they
-are used as paramters in subprogram declarations. C has no way of determining the
+are used as parameters in subprogram declarations. C has no way of determining the
 size of an array. Usually, a subprogram taking an array as parameter also takes
 another parameter that gives the size of the array.
 
