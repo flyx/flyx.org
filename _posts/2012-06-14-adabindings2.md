@@ -221,4 +221,4 @@ advanced topics like handling void pointers and bitfields.
 [To be continued...][2]
 
 [1]: /2012/06/13/adabindings1/
-[2]: /2013/02/18/adabindings3/
+[2]: /2013/02/18/adabinding3/
