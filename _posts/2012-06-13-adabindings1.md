@@ -107,8 +107,8 @@ actually show how to write some code.
 
 [To be continued...][5]
 
-[1]: http://flyx86.github.com/OpenCLAda/
-[2]: http://flyx86.github.com/OpenGLAda/
+[1]: http://flyx.github.io/OpenCLAda/
+[2]: http://flyx.github.io/OpenGLAda/
 [3]: http://gnuada.svn.sourceforge.net/viewvc/gnuada/trunk/projects/swig-1.3.35/
 [4]: http://www.adacore.com/adaanswers/gems/gem-59/
 [5]: /2012/06/14/adabindings2/

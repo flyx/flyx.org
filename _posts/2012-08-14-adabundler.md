@@ -226,5 +226,5 @@ ada-bundler is available at [GitHub][7].
  [3]: http://gtk.org/
  [4]: http://qt.nokia.com/
  [5]: http://www.niestu.com/software/lumen/
- [6]: http://flyx86.github.com/OpenGLAda/
- [7]: https://github.com/flyx86/ada-bundler
+ [6]: http://flyx.github.io/OpenGLAda/
+ [7]: https://github.com/flyx/ada-bundler
