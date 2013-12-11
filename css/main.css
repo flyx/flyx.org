@@ -123,6 +123,10 @@ nav ul {
 	background: #569;
 }
 
+.navpost {
+	padding-right: 5px;
+}
+
 /******************
  FOOTER
 ******************/
@@ -181,6 +185,8 @@ footer a:visited {
 	-o-box-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
 	-moz-box-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
 	-ms-box-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
+	
+	text-align: justify;
 }
 
 .frame {
@@ -194,6 +200,8 @@ footer a:visited {
 	-o-box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85);
 	-moz-box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85);
 	-ms-box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85);
+	
+	text-align: justify;
 }
 
 #previous {
