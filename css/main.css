@@ -8,6 +8,7 @@ html {
 	background-image: -o-linear-gradient(top, #abc, #678);
 	background-image: -moz-linear-gradient(top, #abc, #678);
 	background-image: -ms-linear-gradient(top, #abc, #678);
+	background-attachment: fixed;
 	min-height: 100%;
 	position: relative;
 }
@@ -145,7 +146,7 @@ footer div {
 	margin-left: auto;
 	margin-right: auto;
 	color: #a5a5a5;
-	background: rgba(0, 0, 0, 0.75);
+	background: rgba(40, 40, 60, 0.75);
 	border-radius: 10px 10px 0 0;
 	-moz-border-radius: 10px 10px 0 0;
 	-webkit-border-radius: 10px 10px 0 0;
