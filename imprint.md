@@ -8,5 +8,5 @@ title: Imprint
 Legally responsible for the contents of this site is:
    
     Felix Krause
-    Nähterstraße 109
-    70327 Stuttgart
+    Seyfferstr. 91A
+    70197 Stuttgart
