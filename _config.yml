@@ -3,3 +3,5 @@ pygments: true
 permalink: pretty
 future: false
 paginate: 2
+markdown: redcarpet
+extensions: [fenced_code_blocks]
