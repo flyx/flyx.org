@@ -8,6 +8,7 @@ html {
 	background-image: -o-linear-gradient(top, #abc, #678);
 	background-image: -moz-linear-gradient(top, #abc, #678);
 	background-image: -ms-linear-gradient(top, #abc, #678);
+	background-attachment: fixed;
 	min-height: 100%;
 	position: relative;
 }
@@ -79,7 +80,7 @@ h1 a:visited {
 
 nav {
 	float: left;
-	width: 170px;
+	width: 200px;
 	white-space: normal;
 }
 
@@ -123,6 +124,10 @@ nav ul {
 	background: #569;
 }
 
+.navpost {
+	padding-right: 5px;
+}
+
 /******************
  FOOTER
 ******************/
@@ -141,7 +146,7 @@ footer div {
 	margin-left: auto;
 	margin-right: auto;
 	color: #a5a5a5;
-	background: rgba(0, 0, 0, 0.75);
+	background: rgba(40, 40, 60, 0.75);
 	border-radius: 10px 10px 0 0;
 	-moz-border-radius: 10px 10px 0 0;
 	-webkit-border-radius: 10px 10px 0 0;
@@ -174,26 +179,30 @@ footer a:visited {
 .box {
 	margin-bottom: 1em;
 	padding: 1em;
-	width: 760px;
+	width: 730px;
 	
 	box-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
 	-webkit-box-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
 	-o-box-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
 	-moz-box-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
 	-ms-box-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
+	
+	text-align: justify;
 }
 
 .frame {
 	margin-bottom: 1em;
 	padding: 1em;
 	min-height: 500px;
-	width: 760px;
+	width: 730px;
 	
 	box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85);
 	-webkit-box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85);
 	-o-box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85);
 	-moz-box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85);
 	-ms-box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85);
+	
+	text-align: justify;
 }
 
 #previous {
