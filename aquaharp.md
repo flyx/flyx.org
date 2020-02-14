@@ -1,7 +1,11 @@
 ---
-layout: post
+layout: default
 title: Complete Score for Animusic's <em>Aqua Harp</em>
-tags: [music]
+title_short: Aqua Harp
+kind: legacy
+permalink: /aquaharp/
+weight: 2
+date: 2012-06-10
 ---
 
 ![First page of the Aqua Harp score](/img/aquaharp.png)

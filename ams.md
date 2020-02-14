@@ -1,9 +1,29 @@
 ---
-layout: static
-title: Manual of the Advanced Mario Sequencer
+layout: default
+title: Advanced Mario Sequencer
+title_short: AMS
+kind: legacy
+permalink: /ams/
+weight: 1
 ---
 
-## Manual of the Advanced Mario Sequencer
+![Screenshot of the AMS](/img/ams.png)
+
+The **Advanced Mario Sequencer** is a remake of the sequencer feature from the old
+SNES game _Mario Paint_. It was inspired by the [Mario Paint Composer][1], but aims
+to provide a more user-friendly GUI with added and enhanced editing features.
+
+I wrote the AMS a long time ago in RealBasic.
+Since I have no access to the compiler anymore, I can't update it with 64bit
+support, making the macOS version useless on recent OS versions.
+The Windows version is still working.
+
+### Downloads
+
+ * [Windows][2]
+ * [macOS][3]
+
+## Manual
 
 ### Introduction
 
@@ -35,7 +55,7 @@ Now some more things on editing. Above the note system, there is some white spac
 
 If you want to adjust the speed for a lot of notes, there's a neat hidden feature: Click and drag your mouse beneath the violin key and you'll change the volume of all visible chords. Another little feature are the measure lengths: You can change them with the Measure buttons. It will allow you to adjust the number of chords in a measure. This will have no influence on the playback speed or anything else.
 
-Now if you want to use other sounds for the instruments, you can do that by adding SoundFonts. SoundFonts are files that are a collection of sound samples used for midi instruments. There are quite some SoundFonts available for the AMS. They are usually designed for the Mario Paint Composer, but work without modification on the AMS. Look for SoundFont files at YouTube or the [Mario Paint Hangout][1]. When you have downloaded a file, choose the menu item Add SoundFont from the SoundFonts menu and select your file. You can delete the file afterwards, it will be copied to the AMS user data folder when you add it. After you've added a SoundFont, you can enable it in the SoundFonts menu.
+Now if you want to use other sounds for the instruments, you can do that by adding SoundFonts. SoundFonts are files that are a collection of sound samples used for midi instruments. There are quite some SoundFonts available for the AMS. They are usually designed for the Mario Paint Composer, but work without modification on the AMS. Look for SoundFont files at YouTube or the [Mario Paint Hangout][5]. When you have downloaded a file, choose the menu item Add SoundFont from the SoundFonts menu and select your file. You can delete the file afterwards, it will be copied to the AMS user data folder when you add it. After you've added a SoundFont, you can enable it in the SoundFonts menu.
 
 ### Expert editing
 
@@ -47,4 +67,9 @@ When you encounter a situation where you have a couple of SoundFonts loaded into
 
 Finally, some more notes on the mss files: A file includes the name of the SoundFont used with the song. If you share your files with friends, they might not have this SoundFont installed. If the AMS can't find a SoundFont with the name stored in the file, it will use the standard SoundFont. For the same reason, you can't have multiple SoundFonts with the same name. Now if you're a coder and you ever want to use the mss files for other things, you will find that they're pretty easily readable. They're formatted as XML, which makes them rather bloaty, but also quite easy to access. Please be aware however that if you make changes to the files with a text editor and you're doing something wrong, you won't be able to load the file into AMS again.
 
-[1]: http://mariopaintcomposer.proboards.com/
+
+[1]: http://unfungames.com/mariopaint/
+[2]: /files/AMS_Win32_3.3.zip
+[3]: /files/AMS_MacOSX_3.3.zip
+[4]: /projects/ams/manual/
+[5]: http://mariopaintcomposer.proboards.com/

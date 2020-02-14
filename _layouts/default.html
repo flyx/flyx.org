@@ -1,6 +1,75 @@
-{% capture wrapped_content %}
-   <div id="content">
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page.title }}</title>
+    <link rel="stylesheet" href="/css/main.css" />
+    <link rel="stylesheet" href="/css/syntax.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" />
+  </head>
+  <body>
+    <nav>
+      <a href="#" class="header">
+        <span class="title">{{ site.title }}</span>
+        <i class="fas fa-caret-down"></i>
+      </a>
+      <ul>
+        {% assign pages = site.pages | where:"kind","main" | sort:"weight" %}
+        {% for p in pages %}
+        <li{% if p.url == page.url %} class="active"{% endif %}>
+          <a href="{{ p.url }}">{{ p.title_short }}</a>
+        </li>
+        {% endfor %}
+        <li class="heading">Articles</li>
+        {% assign articles = site.pages | where:"kind","article" | sort:"weight" %}
+        {% for a in articles %}
+        <li class="child{% if a.url == page.url %} active{% endif %}">
+          <a href="{{ a.url }}">{{ a.title_short }}</a>
+        </li>
+        {% endfor %}
+        <li class="heading">Legacy</li>
+        {% assign legacy = site.pages | where:"kind","legacy" | sort:"weight" %}
+        {% for l in legacy %}
+        <li class="child{% if l.url == page.url %} active{% endif %}">
+          <a href="{{ l.url }}">{{ l.title_short }}</a>
+        </li>
+        {% endfor %}
+        <li class="heading">Social</li>
+        <li class="child">
+          <a href="https://github.com/flyx"><i class="fab fa-github"></i>GitHub</a>
+        </li>
+        <li class="child">
+          <a href="https://stackoverflow.com/users/347964/flyx"><i class="fab fa-stack-overflow"></i>StackOverflow</a>
+        </li>
+        <li class="child">
+          <a href="https://www.youtube.com/channel/UC3UoeIsxhVwApgXiqIEY82w"><i class="fab fa-youtube"></i>YouTube</a>
+        </li>
+      </ul>
+    </nav>
+    <article>
+      <header>
+        <h1>{{ page.title }}</h1>
+        <span class="date">{{ page.date }}</span>
+      </header>
+
       {{ content }}
-   </div>
-{% endcapture %}
-{% include html.html %}
+    </article>
+
+    <script>
+      document.querySelector("a.header").addEventListener("click", function(e) {
+        const nav = this.parentNode;
+        if (nav.classList.contains("expanded")) {
+          nav.classList.remove("expanded");
+          this.children[1].classList.add("fa-caret-down");
+          this.children[1].classList.remove("fa-caret-up");
+        } else {
+          nav.classList.add("expanded");
+          this.children[1].classList.remove("fa-caret-down");
+          this.children[1].classList.add("fa-caret-up");
+        }
+        e.preventDefault();
+      });
+    </script>
+  </body>
+</html>

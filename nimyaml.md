@@ -1,0 +1,361 @@
+---
+layout: default
+title: The Making of NimYAML
+title_short: Making of NimYAML
+kind: article
+permalink: /nimyaml-making-of/
+weight: 1
+date: 2016-09-22
+---
+
+This article is an exploration of the advanced features of the programming
+language [Nim][1], using the example of implementing [YAML][2] serialization.
+I will show why Nim's advanced metaprogramming facilities are useful and how
+some of them are employed. Prior knowledge about Nim and YAML definitely makes
+reading this post easier, but I will go over the very basics in case you don't.
+
+### YAML
+
+You may have already heard of it. It is a data serialization languages that
+builds upon JSON but is nicer for human being to read and write (mostly). So,
+if you have some JSON data like this:
+
+{%highlight json %}
+{
+   "apples": 2,
+   "bananas": 42,
+   "other things": [
+     { "lasers": true },
+     { "spaceships": "shiny" }
+   ]
+}
+{% endhighlight %}
+
+Your YAML looks like this:
+
+{% highlight yaml %}
+apples: 2
+bananas: 42
+other things:
+- lasers: true
+- spaceships: shiny
+{% endhighlight %}
+
+Now before you think too much about what this data might represent, let's
+move on to the programming language we will use.
+
+### Nim
+
+Nim is a statically typed, garbage collected language that compiles to C
+(or various other backends). It uses indentation for structure (like Python)
+and tries not to hinder your hacking habits by requiring you to verbosely
+specify type names everywhere.
+
+Most of the Nim code shown here is easy to understand if you have seen code
+before. I will explain the tricky things.
+
+### NimYAML
+
+So, what we want to do now is implementing automatic type serialization
+and deserialization with Nim and YAML. That is to say, we want to be able to
+dump any Nim type into a YAML representation, and we also want to be able to
+reload that YAML representation back into Nim. This should work without
+modifying the type, so we can serialize types of a third-party library we happen
+to use.
+
+As a prerequisite, we will use a YAML parser and presenter which already exists
+by magic. Actually, it is a project called NimYAML, you can git-clone it from
+the [repository][3]. At the time of writing, there was a little API break after
+the most recent release, so if you actually want to test the code, use the
+`devel` branch from the repo.
+
+So, how do the values we want to serialize look like? Let's have a look:
+
+{% highlight nim %}
+var str = "some string"
+var i = 42
+
+type Person = object
+  firstname, surname: string
+  age: int
+  isTheChosenOne: bool
+
+var p = Person(firstname: "Luke", surname: "Skywalker", age: 19,
+               isTheChosenOne: false)
+{% endhighlight %}
+
+Here, we have some simple things to start with: A string named `str`, an
+integer named `i` and a complex object named `p`.
+
+### Dumping
+
+What we want to do is this:
+
+{% highlight nim %}
+echo dump(str) # dumps a string as YAML
+echo dump(i)   # dumps an integer as YAML
+echo dump(p)   # dumps a person as YAML
+{% endhighlight %}
+
+So, how do we start? Let's just write the ``dump()`` proc:
+
+{% highlight nim %}
+import yaml.stream, yaml.presenter, yaml.taglib
+
+proc dump[T](o: T): string =
+  # create a buffered stream to hold our YAML events
+  var events = newBufferYamlStream()
+  events.put(startDocEvent()) # start the YAML document
+  represent(o, events)        # write events for the value
+  events.put(endDocEvent())   # finish the YAML document
+  # render the event stream as YAML document
+  result = present(events, serializationTagLibrary)
+{% endhighlight %}
+
+First thing to notice that our proc (called *function* in some other languages)
+has a generic parameter `T`. That is to say, the parameter `o` has a
+generic type. We can call this function with a value of any type as long as
+everything we do with this value is supported by the type.
+
+When serializing, we transform our value into a stream of events. These events
+will then be transformed into YAML by the presenter. The stream always starts
+with a *document start event*, which we put into the stream, and a
+*document end event*, which we also put into the stream.
+
+Finally, we call `present`, which takes our event stream and transforms it into
+YAML. The `serializationTagLibrary` is a value supplied by NimYAML and does not
+need to be of concern for us right now.
+
+So, with this, almost everything we need to do has been done, right? Well, yes,
+except of the `represent` part. This is the *everything you do with this value*
+I talked about above. We need to implement `represent` for all types
+we want to dump. Let's start with three simple types: `string`, `int` and
+`bool`:
+
+{% highlight nim %}
+proc represent(s: string, events: BufferYamlStream) =
+  events.put(scalarEvent(s))
+
+proc represent(i: int, events: BufferYamlStream) =
+  events.put(scalarEvent($i))
+
+proc represent(b: bool, events: BufferYamlStream) =
+  events.put(scalarEvent($b))
+{% endhighlight %}
+
+Well that was easy! The only thing we need to do for each simple value is to
+create a *scalar event* which has as content a textual representation of our
+value. We use the handy `$` operator here, which transforms our `int` and
+`bool` value into strings.
+
+Now comes the interesting part: How can we serialize an arbitrary object? Here,
+Nim's metaprogramming capabilities are a big help:
+
+{% highlight nim %}
+proc represent[T: object](o: T, events: BufferYamlStream) =
+  events.put(startMapEvent())
+  for name, value in fieldPairs(o):
+    events.put(scalarEvent(name))
+    represent(value, events)
+  events.put(endMapEvent())
+{% endhighlight %}
+
+First thing to notice is that we once again have a generic proc. But this time,
+the generic parameter `T` is constrained: It only takes types that are an
+`object`.
+
+Since an object is a complex value, we use a YAML *mapping* (also known as
+*hash map* or *dictionary* in other languages) to hold all its values. We start
+and end it with a *start map event* and an *end map event* respectively. Now
+comes the interesting part: `fieldPairs` is a special iterator that iterates
+over fields of an object. While this may be common in scripting languages like
+JavaScript, it is far less so in statically typed languages.
+
+Java, for example, has its reflection API to do this *at runtime*, but this has
+severe consequences: You suddenly lose all type safety and operate on raw
+`Object` values, which you cast around. It also means that the runtime must
+provide type information, so the code can get a list of fields for a certain
+class type. Nim goes a different way:
+
+The ``for`` loop is expanded at compile time. So we do not need to carry over
+any type information into the runtime environment. This means that we can write
+generic code that works on any object type, no matter how many fields it
+contains and what types they have. It also means that we can have complete type
+safety because the code is expanded at compile time and then interpreted for
+every typed field of the object separately.
+
+So, what do we do in this loop? First, we create a scalar event which holds the
+name of the field. This will be a *key* in our YAML mapping. The *value* for
+this key is the represented value of the field. This is just a recursive call.
+With this code, we have written everything necessary to serialize all objects
+that contain strings, ints, bools or other objects with the same restrictions.
+
+If we execute our three calls from the beginning now:
+
+{% highlight nim %}
+echo dump(str)
+echo dump(i)
+echo dump(p)
+{% endhighlight %}
+
+We get:
+
+{% highlight yaml %}
+%YAML 1.2
+---
+some string
+{% endhighlight %}
+
+<div style="height: 5px"></div>
+
+{% highlight yaml %}
+%YAML 1.2
+---
+42
+{% endhighlight %}
+
+<div style="height: 5px"></div>
+
+{% highlight yaml %}
+%YAML 1.2
+---
+firstname: Luke
+surname: Skywalker
+age: 19
+isTheChosenOne: false
+{% endhighlight %}
+
+That wasn't too hard, was it? But, all this dumping would be of little help if
+we couldn't also load the data back in, right? So…
+
+### Loading
+
+Let's load it! We start as before:
+
+{% highlight nim %}
+import yaml.parser
+
+proc load[T](input: string, o: var T) =
+  var
+    parser = newYamlParser(serializationTagLibrary)
+    events = parser.parse(input)
+  doAssert events.next().kind == yamlStartDoc
+  construct(events, o)
+  doAssert events.next().kind == yamlEndDoc
+{% endhighlight %}
+
+Once again, we define a generic proc to handle any possible type. Note that the
+variable we want to load is a `var` parameter rather than a return value (a `var`
+parameter is passed by reference). This enables us to later call the `load` proc
+without explicitly giving the generic type parameter.
+
+We create a parser object with the same `serializationTagLibrary` we used before
+(remember?) which is still not of any concern. Then, we tell the parser to
+generate an event stream by parsing our input.
+
+Remember how we generated two events that start and end our YAML document? Now
+we call `next()` on the event stream, which will each time yield the next event,
+and check whether the first and last event are of kind *document start* and
+*document end* respectively. So far, so good. As before, we then call a
+`construct` proc which needs to be implemented for every type we want to load.
+
+Let us implement it for the simple types:
+
+{% highlight nim %}
+import strutils
+
+proc construct(events: YamlStream, s: var string) =
+  let e = events.next()
+  doAssert e.kind == yamlScalar
+  s = e.scalarContent
+
+proc construct(events: YamlStream, i: var int) =
+  let e = events.next()
+  doAssert e.kind == yamlScalar
+  i = int(parseBiggestInt(e.scalarContent))
+
+proc construct(events: YamlStream, b: var bool) =
+  let e = events.next()
+  doAssert e.kind == yamlScalar
+  b = e.scalarContent == "true"
+{% endhighlight %}
+
+For each of the simple types, we first retrieve the the event that hopefully
+contains our value and check if it actually is a *scalar item*. Then, we parse
+it into the target type. This is trivial for a string, and easy enough for an
+int (using a stdlib feature) and a boolean (which could use stricter checking).
+
+Now that we have these, let us write our loader for object types:
+
+{% highlight nim %}
+proc construct[T: object](events: YamlStream, o: var T) =
+  var e = events.next()
+  doAssert e.kind == yamlStartMap
+  e = events.next()
+  while e.kind != yamlEndMap:
+    doAssert e.kind == yamlScalar
+    for name, value in fieldPairs(o):
+      if name == e.scalarContent:
+        construct(events, value)
+        break
+    e = events.next()
+{% endhighlight %}
+
+Our object must start with a *start map event* and end with an *end map event*,
+which is checked by the `doAssert` and the while loop condition respectively.
+For every key-value pair in the map, we check that the key is a scalar and
+search for a field of the object with the same name. If we find one, we then
+construct the value of this field from the event stream.
+
+Of course, we should check whether the name actually matched any of the field
+names, but this is left as an exercise to the reader. We could also ensure that
+every field is matched, which is an excellent second exercise for the reader.
+And finally, we could check for duplicates, which is, you guessed it, the third
+exercise.
+
+That's it! Let's test it:
+
+{% highlight nim %}
+var p2: Person
+load("""%YAML 1.2
+---
+firstname: Luke
+surname: Skywalker
+age: 19
+isTheChosenOne: false""", p2)
+echo p2.firstname, ' ', p2.surname, ", aged ", p2.age, ", is ",
+    if p2.isTheChosenOne: "" else: "not ", "the chosen one."
+{% endhighlight %}
+
+Output:
+
+{% highlight shell %}
+Luke Skywalker, aged 19, is not the chosen one.
+{% endhighlight %}
+
+### Conclusion
+
+We have just implemented a generic serializer for a statically typed programming
+language in less than 100 lines of code. Isn't that awesome! Compare that to the
+amount of Java code you need to serialize objects to XML given the standard Java
+XML API.
+
+Well, the actual serialization API implementation of NimYAML is, of course, a
+bit bigger (about 1000 lines of code) because it handles far more cases,
+including reference types (garbage-collected pointers), sequences (lists) and
+various other types which need special treatment. But you get my point: I do not
+want to write this in a language that makes it difficult to handle arbitrarily
+defined object types. And I also do not want to give up on static typing. So Nim
+seems to be the right language to use for me.
+
+What I have shown here also is just the tip of the iceberg. You can do far more
+complex things with `macros` in Nim than what I did with `fieldPairs`. The
+actual serialization implementation uses macros instead of `fieldPairs` for
+handling objects because they are more flexible.
+
+Well, that's it! Thanks for reading.
+
+ [1]: http://nim-lang.org/
+ [2]: http://yaml.org/
+ [3]: https://github.com/flyx/NimYAML
+
