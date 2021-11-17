@@ -1,0 +1,532 @@
+---
+layout: default
+title: "Exploring Nix Flakes: Build LaTeX Documents Reproducibly"
+title_short: Nix Flakes and LaTeX
+kind: article
+permalink: /nix-flakes-latex/
+weight: 4
+date: 2021-11-17
+---
+
+This article shows how to use [Nix Flakes](https://nixos.wiki/wiki/Flakes) to build LaTeX documents.
+It is not particularly beginner-friendly to keep it at manageable size.
+
+If you don't know much about Nix and are in a hurry, I recommend [*this article*](https://serokell.io/blog/practical-nix-flakes) for a quick overview of the language and Flakes.
+A proper way to learn about Nix is the [*Nix Pills*](https://nixos.org/guides/nix-pills/) series, and [*this series*](https://www.tweag.io/blog/2020-05-25-flakes/) about Nix Flakes.
+
+The proper way to learn LaTeX is to take any vaguely math-related academic course and be peer-pressured into trying it out until it works.
+Jokes aside, this probably isn't an interesting read for people who are not already familiar with LaTeX; while I will explain the things I'm doing with Nix, the LaTeX code I will just throw at you assuming you can read it.
+
+**Metered connection users:** Be aware that the instructions in this article download quite a bit of data from the internet.
+
+## Getting Started
+
+In an empty directory, let's start a `document.tex` file like this:
+
+{% highlight latex %}
+\documentclass[a4paper]{article}
+
+\begin{document}
+  Hello, World!
+\end{document}
+{% endhighlight %}
+
+Now we want to tell Nix how to build this document.
+To do this, create a file `flake.nix` with the following content:
+
+{% highlight nix %}
+{
+  description = "LaTeX Document Demo";
+  inputs = {
+    nixpkgs.url = github:NixOS/nixpkgs/nixos-21.05;
+    flake-utils.url = github:numtide/flake-utils;
+  };
+  outputs = { self, nixpkgs, flake-utils }:
+    with flake-utils.lib; eachSystem allSystems (system:
+    let
+      pkgs = nixpkgs.legacyPackages.${system};
+      tex = pkgs.texlive.combine {
+          inherit (pkgs.texlive) scheme-minimal latex-bin latexmk;
+      };
+    in rec {
+      packages = {
+        document = pkgs.stdenvNoCC.mkDerivation {
+          name = "latex-demo-document";
+          src = self;
+          buildInputs = [ pkgs.coreutils tex ];
+          phases = ["unpackPhase" "buildPhase" "installPhase"];
+          buildPhase = ''
+            export PATH="${pkgs.lib.makeBinPath buildInputs}";
+            mkdir -p .cache/texmf-var
+            env TEXMFHOME=.cache TEXMFVAR=.cache/texmf-var \
+              latexmk -interaction=nonstopmode -pdf -lualatex \
+              document.tex
+          '';
+          installPhase = ''
+            mkdir -p $out
+            cp document.pdf $out/
+          '';
+        };
+      };
+      defaultPackage = packages.document;
+    });
+}
+{% endhighlight %}
+
+Our inputs are `nixpkgs`, the main Nix package repository, from which we primarily need *TeX Live*, and `flake-utils`, a library that provides some convenience functions.
+
+For defining our outputs, we use `eachSystem` (from `flake-utils`) to define an output package for each system in `allSystems` – we do want users on any system to be able to compile our document.
+
+The important bit `pkgs.texlive.combine` builds a TeX Live installation containing the TeX Live packages we specify.
+For building our minimal document, we start with `scheme-minimal` and include `latex-bin` (to have `lualatex`) and `latexmk` (our helper script to build the document).
+
+Then, we define our output package *document*.
+Since building LaTeX document requires no C compiler, we use `stdenvNoCC`.
+We need the phases *unpack* (to access our source code), *build* (to typeset the document) and *install* (to copy the PDF into `$out`).
+
+`latexmk` is a script that continuously calls our LaTeX processor (in this case, `lualatex`) until the document reaches a fixpoint.
+`lualatex` needs writable cache directories, which we create and communicate via environment variables.
+`-interaction=nonstopmode` will cause `lualatex` to not stop and ask for user input in case an error is encountered, as it would by default.
+By the way, we use `lualatex` instead of `pdflatex` simply because it is the more modern alternative, supporting UTF-8, TTF/OTF Fonts, etc.
+
+In the *install* phase, we create the `$out` directory and copy the created document into it.
+We could instead make our document itself be `$out` (because it is the only output file of our derivation), but having a PDF file without `.pdf` extension felt weird, so I created a containing directory.
+
+Now let's pin our input flakes to their current versions by doing
+
+{% highlight bash %}
+nix flake lock
+{% endhighlight %}
+
+For those not familiar with Flakes, this will create a file `flake.lock` (feel free to explore its contents).
+From now on, we are working on specific versions of our inputs, which are described in `flake.lock`.
+
+One last thing before we can build our document:
+The variable `self` will only contain those files of our source that are checked into version control.
+So we'll do
+
+{% highlight bash %}
+git init
+git add flake.{nix,lock} document.tex
+git commit -m "initial commit"
+{% endhighlight %}
+
+When that's done, we can build our document with
+
+{% highlight bash %}
+nix build
+{% endhighlight %}
+
+This will take some time, but will eventually create a directory `result` which contains `document.pdf`.
+Actually, `result` is a symlink which can be inspected via
+
+{% highlight bash %}
+readlink result
+{% endhighlight %}
+
+And it points to our `/nix/store`.
+
+As shown by this minimal example, our `flake.nix` is not just a build system, but also manages all dependencies that are required to build our document.
+Now, let's explore what happens when we use packages in our LaTeX document.
+
+## TeX Live Packages
+
+Let's say we want to have a nice tabular in our `document.tex`:
+
+{% highlight latex %}
+\documentclass[a4paper]{article}
+
+\usepackage{nicematrix}
+
+\begin{document}
+  \begin{NiceTabular}{p{5.5cm}|p{2cm}}
+  \CodeBefore
+    \rowcolors{2}{white}{gray!30}
+  \Body \hline
+    droggel & 23 \\ \hline
+    jug     & 42 \\ \hline
+  \end{NiceTabular}
+\end{document}
+{% endhighlight %}
+
+However, our current *TeX Live* configuration does not provide `nicematrix`.
+The packages we provide in `pkgs.texlive.combine` are defined by [tlmgr](https://www.tug.org/texlive/tlmgr.html), TeX Live's package manager.
+Usually, the name we give in `\usepackage` is the name of the package we need to include, so let's test that:
+
+{% highlight nix %}
+    # […]
+    let
+      pkgs = nixpkgs.legacyPackages.${system};
+      tex = pkgs.texlive.combine {
+        inherit (pkgs.texlive) scheme-minimal latex-bin latexmk
+        nicematrix;
+      };
+    in rec {
+    # […]
+{% endhighlight %}
+
+Don't forget to commit all changes to git before building (we'll just amend our initial commit):
+
+{% highlight bash %}
+git commit -a --amend --no-edit
+nix build
+{% endhighlight %}
+
+While `nicematrix` is indeed the correct package here, we'll run into an error.
+It turns out, `nicematrix` requires some additional packages to work and we didn't include them.
+Can you figure out which ones? I'll wait.
+
+<br style="line-height: 5em;"/>
+
+If you actually tried to tackle this problem, you have probably read the log, which tells you some `.sty` files are missing, and then tried to include their names in `pkgs.texlive.combine`.
+That only brings you so far, because *some* `.sty` files are included in packages that carry a different name. 
+The following is the complete list of packages we need:
+
+{% highlight nix %}
+    # […]
+    let
+      pkgs = nixpkgs.legacyPackages.${system};
+      tex = pkgs.texlive.combine {
+        inherit (pkgs.texlive) scheme-minimal latex-bin latexmk
+        tools amsmath pgf epstopdf-pkg nicematrix infwarerr grfext
+        kvdefinekeys kvsetkeys kvoptions ltxcmds;
+      };
+    in rec {
+    # […]
+{% endhighlight %}
+
+For reference, all existing packages are listed in [this file](https://github.com/NixOS/nixpkgs/blob/nixos-21.05/pkgs/tools/typesetting/tex/texlive/pkgs.nix), however this list is hardly helpful without meta information about the packages.
+In a usual TeX Live installation, you could use `tlmgr search --file <missing>` to find out which package contains a file, but nixpkgs does not provide this utility.
+For all I know, that information is not easily queryable on the internet either.
+
+Of course, we only need to run around and collect all these packages because we started with the *minimal* scheme.
+Switching to the *basic* scheme will provide almost all packages we need:
+
+{% highlight nix %}
+    # […]
+    let
+      pkgs = nixpkgs.legacyPackages.${system};
+      tex = pkgs.texlive.combine {
+        inherit (pkgs.texlive) scheme-basic latexmk pgf nicematrix;
+      };
+    in rec {
+    # […]
+{% endhighlight %}
+
+This shows that we basically choose how much work we want to put into listing our TeX dependencies.
+If we start with a larger scheme, it is less work but we will download more packages than necessary.
+The laziest way would of course be to just include `scheme-full`.
+Nix' philosophy is instead to only list the dependencies we *actually* need.
+I would say that starting with `scheme-basic` is generally fine.
+
+Don't forget to check out the new document we can now create with `nix build`!
+
+## Beyond TeX Live
+
+Now assume we want to use the [Copse Font](https://github.com/google/fonts/tree/main/ofl/copse) in our document.
+This font is not available via TeX Live, nor in *nixpkgs*.
+What do we do?
+
+The first thing that might come to mind is *could we just declare this as input?*
+But let's think about what inputs are:
+They are parameters of our outputs, which is useful because we don't want to change our Flake just because an input released a new version.
+`flake.lock` gives us control over whether we want to switch to a newer version of our input.
+
+However, a font is hardly a resource that gets updates, and thus we don't need the inputs system to manage it.
+Instead, we will just refer to it with a static URL, and give its expected hash to ensure we get the expected version.
+To calculate the hash, we will *prefetch* the font via its URL:
+
+{% highlight bash %}
+nix store prefetch-file \
+  https://github.com/google/fonts/raw/main/ofl/copse/Copse-Regular.ttf
+{% endhighlight %}
+
+This will load the font into our `/nix/store` and output its hash.
+We can then include it in our `flake.nix`:
+
+{% highlight nix %}
+{
+  description = "LaTeX Document Demo";
+  inputs = {
+    nixpkgs.url = github:NixOS/nixpkgs/nixos-21.05;
+    flake-utils.url = github:numtide/flake-utils;
+  };
+    
+  outputs = { self, nixpkgs, flake-utils }:
+    with flake-utils.lib; eachSystem allSystems (system:
+    let
+      pkgs = nixpkgs.legacyPackages.${system};
+      tex = pkgs.texlive.combine {
+        inherit (pkgs.texlive) scheme-basic latexmk
+        pgf nicematrix fontspec;
+      };
+      copse = pkgs.fetchurl {
+        url =
+  https://github.com/google/fonts/raw/main/ofl/copse/Copse-Regular.ttf;
+        sha256 = "sha256-uFLmgvDGbeTbGDX4VF/y6UdhVJmHpGB0R7Bp6XP1Cx0=";
+      };
+    in rec {
+      packages = {
+        document = pkgs.stdenvNoCC.mkDerivation {
+          name = "latex-demo-document";
+          src = self;
+          buildInputs = [ pkgs.coreutils tex ];
+          phases = ["unpackPhase" "buildPhase" "installPhase"];
+          buildPhase = ''
+            export PATH="${pkgs.lib.makeBinPath buildInputs}";
+            mkdir -p .cache/texmf-var
+            ln -s ${copse} Copse-Regular.ttf
+            env TEXMFHOME=.cache TEXMFVAR=.cache/texmf-var \
+              latexmk -interaction=nonstopmode -pdf -lualatex \
+              document.tex
+          '';
+          installPhase = ''
+            mkdir -p $out
+            cp document.pdf $out/
+          '';
+        };
+      };
+      defaultPackage = packages.document;
+    });
+}
+{% endhighlight %}
+
+Note how we import the downloaded font into the build directory via symlink.
+`${copse}` simply expands to the font's path in `/nix/store`.
+
+With that done, let's use the font in our `document.tex`.
+We'll set it up as the standard monospace font and make the second column of our tabular use it:
+
+{% highlight latex %}
+\documentclass[a4paper]{article}
+
+\usepackage{fontspec}
+\setmonofont{Copse}[Path=./, Extension=.ttf, UprightFont=Copse-Regular]
+
+\usepackage{nicematrix}
+
+\begin{document}
+    \begin{NiceTabular}{p{5.5cm}|>{\ttfamily}p{2cm}}
+    \CodeBefore
+        \rowcolors{2}{white}{gray!30}
+    \Body \hline
+        droggel & 23 \\ \hline
+        jug     & 42 \\ \hline
+    \end{NiceTabular}
+\end{document}
+{% endhighlight %}
+
+Update git and build:
+
+{% highlight bash %}
+git commit -a --amend --no-edit
+nix build
+{% endhighlight %}
+
+You should have a nice `result/document.pdf` that uses the Copse font.
+
+This section has shown how we can depend on any resource available on the internet.
+Of course, there is always the possibility of resources vanishing – if this is a concern, you can simply put the font file in your repository instead.
+
+## Configurable Documents
+
+Having a single document as output is fine for a lot of use-cases.
+But what if our document has data inputs, for example because we want to generate bulk letters?
+In this case, our output should not be the document itself, but a script that takes the relevant data as input and generates the document.
+Let's try and modify our setup to do that.
+
+The first step towards our goal is to have our package output a script that basically does what our build step currently does:
+Build the document.
+For this, we remove the *build* step from our package and modify the *install* step:
+
+{% highlight nix %}
+{
+  description = "LaTeX Document Demo";
+  inputs = {
+    nixpkgs.url = github:NixOS/nixpkgs/nixos-21.05;
+    flake-utils.url = github:numtide/flake-utils;
+  };
+  
+  outputs = { self, nixpkgs, flake-utils }:
+    with flake-utils.lib; eachSystem allSystems (system:
+    let
+      pkgs = nixpkgs.legacyPackages.${system};
+      tex = pkgs.texlive.combine {
+        inherit (pkgs.texlive) scheme-basic latexmk
+        pgf nicematrix fontspec;
+      };
+      copse = pkgs.fetchurl {
+        url =
+  https://github.com/google/fonts/raw/main/ofl/copse/Copse-Regular.ttf;
+        sha256 = "sha256-uFLmgvDGbeTbGDX4VF/y6UdhVJmHpGB0R7Bp6XP1Cx0=";
+      };
+    in rec {
+      packages = {
+        document = pkgs.stdenvNoCC.mkDerivation rec {
+          name = "latex-demo-document";
+          src = self;
+          propagatedBuildInputs = [ pkgs.coreutils tex ];
+          phases = ["unpackPhase" "installPhase"];
+          installPhase = ''
+            mkdir -p $out/{bin,share}
+            ln -s ${copse} $out/share/Copse-Regular.ttf
+            cp document.tex $out/share/document.tex
+            cat <<EOF >$out/bin/latex-demo-document
+            export PATH="${pkgs.lib.makeBinPath propagatedBuildInputs}";
+            DIR=\$(mktemp -d)
+            RES=\$(pwd)/document.pdf
+            cd $out/share
+            mkdir -p "\$DIR/.texcache/texmf-var"
+            env TEXMFHOME="\$DIR/.cache" \
+                TEXMFVAR="\$DIR/.cache/texmf-var" \
+              latexmk -interaction=nonstopmode -pdf -lualatex \
+              -output-directory="\$DIR" document.tex
+            mv "\$DIR/document.pdf" \$RES
+            rm -rf "\$DIR"
+            EOF
+            chmod u+x $out/bin/latex-demo-document
+          '';
+        };
+      };
+      defaultPackage = packages.document;
+    });
+}
+{% endhighlight %}
+
+Mind how our `buildInputs` have moved to `propagatedBuildInputs`.
+This is because these are now runtime dependencies and thus need to be part of the closure of the generated derivation.
+That is achieved by putting them in the `propagatedBuildInputs`.
+
+Let me clarify what is happening with all the dollar signs:
+`${…}` is an expression processed by Nix, `$out` is processed by bash when executing the *install* phase, and `\$DIR` is written by bash as `$DIR` into our generated script.
+
+Our output directory now the generated script in `bin`, and `document.tex` and `Copse-Regular.ttf` in `share` as we need those files at runtime to build the document.
+While our build environment provided a temporary directory to build the document before, we now need to create one manually via `mktemp -d` so that the current working directory is not cluttered with intermediate LaTeX files – the user only wants the resulting `.pdf` file.
+This also ensures that any files existing in the working directory do not affect our build.
+
+Fun fact: By explicitly depending on `pkgs.coreutils`, we circumvent a problem with `mktemp` that haunts macOS and BSD users:
+The BSD `mktemp` requires a template as parameter, while the one in GNU coreutils does not.
+This makes it [difficult to write a script that works with both versions](https://unix.stackexchange.com/questions/30091/fix-or-alternative-for-mktemp-in-os-x), a problem which we nicely circumvent by explicitly using the GNU coreutils everywhere.
+
+Let's try it out:
+
+{% highlight bash %}
+git commit -a --amend --no-edit
+nix build
+result/bin/latex-demo-document
+{% endhighlight %}
+
+This should create the `document.pdf` in your working directory.
+We can replace the last two commands with
+
+{% highlight bash %}
+nix run
+{% endhighlight %}
+
+Now that we can do this, let's make the document fillable with user-provided values.
+`latexmk` provides a nice feature that executes TeX code before the main document.
+We will set this up in our flake in a moment, for now let's assume the commands `\sender` and `\receiver` are available and update our `document.tex`:
+
+{% highlight latex %}
+\documentclass[a4paper]{article}
+
+\usepackage{fontspec}
+\setmonofont{Copse}[Path=./, Extension=.ttf, UprightFont=Copse-Regular]
+
+\usepackage{nicematrix}
+
+\begin{document}
+  \begin{NiceTabular}{p{5.5cm}|>{\ttfamily}p{2cm}}
+  \CodeBefore
+    \rowcolors{2}{white}{gray!30}
+  \Body \hline
+    Sender:    & \sender   \\ \hline
+    Recipient: & \receiver \\ \hline
+  \end{NiceTabular}
+\end{document}
+{% endhighlight %}
+
+In our `flake.nix`, we now update the `latexmk` call to define those two commands:
+
+{% highlight nix %}
+{
+  description = "LaTeX Document Demo";
+  inputs = {
+    nixpkgs.url = github:NixOS/nixpkgs/nixos-21.05;
+    flake-utils.url = github:numtide/flake-utils;
+  };
+
+  outputs = { self, nixpkgs, flake-utils }:
+    with flake-utils.lib; eachSystem allSystems (system:
+    let
+      pkgs = nixpkgs.legacyPackages.${system};
+      tex = pkgs.texlive.combine {
+        inherit (pkgs.texlive) scheme-basic latexmk
+        pgf nicematrix fontspec;
+      };
+      copse = pkgs.fetchurl {
+        url =
+  https://github.com/google/fonts/raw/main/ofl/copse/Copse-Regular.ttf;
+        sha256 = "sha256-uFLmgvDGbeTbGDX4VF/y6UdhVJmHpGB0R7Bp6XP1Cx0=";
+      };
+    in rec {
+      packages = {
+        document = pkgs.stdenvNoCC.mkDerivation rec {
+          name = "latex-demo-document";
+          src = self;
+          propagatedBuildInputs = [ pkgs.coreutils tex ];
+          phases = ["unpackPhase" "installPhase"];
+          installPhase = ''
+            mkdir -p $out/{bin,share}
+            ln -s ${copse} $out/share/Copse-Regular.ttf
+            cp document.tex $out/share/document.tex
+            cat <<EOF >$out/bin/latex-demo-document
+            export PATH="${pkgs.lib.makeBinPath propagatedBuildInputs}";
+            DIR=\$(mktemp -d)
+            RES=\$(pwd)/document.pdf
+            cd $out/share
+            mkdir -p "\$DIR/.texcache/texmf-var"
+            env TEXMFHOME="\$DIR/.cache" \
+                TEXMFVAR="\$DIR/.cache/texmf-var" \
+              latexmk -interaction=nonstopmode -pdf -lualatex \
+              -output-directory="\$DIR" \
+              -pretex="\def\sender{\$1}\def\receiver{\$2}" -usepretex \
+              document.tex
+            mv "\$DIR/document.pdf" \$RES
+            rm -rf "\$DIR"
+            EOF
+            chmod u+x $out/bin/latex-demo-document
+          '';
+        };
+      };
+      defaultPackage = packages.document;
+    });
+}
+{% endhighlight %}
+
+Now we can do:
+
+{% highlight bash %}
+git commit -a --amend --no-edit
+nix run . Alice Bob
+{% endhighlight %}
+
+`nix run` expects as first argument the Flake to run, so if we provide parameters, we must put `.` first to reference the flake in our working directory.
+This should give us a `document.pdf` containing the two given names.
+
+By the way, if we ever push this repository to GitHub, e.g. at `example/nix-flakes-latex`, we can then run it anywhere via
+
+{% highlight bash %}
+nix run github:example/nix-flakes-latex Alice Bob
+{% endhighlight %}
+
+## Conclusion
+
+Nix Flakes allow us not just to precisely specify *TeX Live* packages we need to build our document, but also to include external resources as additional dependencies.
+By pinning the versions of our inputs in `flake.lock`, it guarantees us that the document can be reproducibly built anywhere.
+
+Now you might wonder, what do we really *need* all this for?
+Are LaTeX documents not like „write once, typeset, never touch the source again“?
+Well, I'll have you know that I regularly build my pen & paper character sheets with LaTeX, they *are* fillable with values and *do* depend on external artwork.
+The sources for that [are available on GitHub](https://github.com/flyx/DSA-4.1-Heldendokument) if you want to have a look, but be warned that everything is German.
+You're welcome to come up with your own obscure use-case ;).
