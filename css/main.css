@@ -1,15 +1,13 @@
 html {
   --color-dark: rgba(17, 17, 0, 0.85);
-  --color-medium: #313120;
+  --color-medium: #3a3a25;
   --color-medium-highlight: #3a3a2a;
   --color-light: #505044;
   --color-text: #f3f3e8;
-  --colot-text-dark: #a0a097;
+  --color-text-dark: #a0a097;
 
-  background-image:
-    linear-gradient(var(--color-dark), var(--color-dark)),
-    url("/img/sandpaper-gray.png");
-  background-repeat: repeat;
+  background-color: #252520;
+
   color: var(--color-text);
   min-height: 100%;
   font-family: Arial, Helvetica, sans-serif;
@@ -34,6 +32,12 @@ nav {
   flex: 0 0 auto;
   background-color: var(--color-medium);
   font-size: large;
+  background-image:
+    linear-gradient(var(--color-dark), var(--color-dark)),
+    url("/img/sandpaper-gray.png");
+  background-repeat: repeat;
+  box-shadow: 5px 0 5px rgba(0,0,0,0.5);
+  z-index: 1;
 }
 
 nav > a.header {
@@ -118,10 +122,17 @@ article {
   flex: 1 1 auto;
   margin: 0;
   padding: 1em;
-  max-width: 85ch;
   text-align: justify;
   hyphens: auto;
   line-height: 150%;
+  max-height: 100vh;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+article > * {
+  max-width: 82ch;
+  box-sizing: border-box;
 }
 
 article a {
@@ -177,8 +188,8 @@ article img {
 }
 
 figure.highlight {
-  margin: 1em;
-  padding: 0;
+  margin: 0;
+  padding: .5em 0;
 }
 
 @media only screen and (max-device-width: 720px) {
@@ -189,7 +200,8 @@ figure.highlight {
 
 figure.highlight pre {
   border-radius: .5em;
-  padding: 1em;
+  padding: .5em;
+  margin: 0;
   overflow-x: auto;
 }
 

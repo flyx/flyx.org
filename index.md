@@ -27,8 +27,6 @@ Here are some of my open source projects:
   </a>
 </section>
 
----
-
 You can contact me via [Matrix](https://matrix.org/): `@flyx:flyx.org`
 
 Or write me an [email](/email).
