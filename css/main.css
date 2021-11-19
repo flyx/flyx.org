@@ -183,6 +183,12 @@ article h2 {
   line-height: 150%;
 }
 
+article span.note {
+  font-size: x-small;
+  font-weight: normal;
+  padding-left: 2em;
+}
+
 article h3 {
   font-size: medium;
   font-weight: bold;

@@ -50,7 +50,7 @@ To do this, create a file `flake.nix` with the following content:
       };
     in rec {
       packages = {
-        document = pkgs.stdenvNoCC.mkDerivation {
+        document = pkgs.stdenvNoCC.mkDerivation rec {
           name = "latex-demo-document";
           src = self;
           buildInputs = [ pkgs.coreutils tex ];
@@ -128,6 +128,74 @@ And it points to our `/nix/store`.
 
 As shown by this minimal example, our `flake.nix` is not just a build system, but also manages all dependencies that are required to build our document.
 Now, let's explore what happens when we use packages in our LaTeX document.
+
+## Producing Identical Documents <span class="note">added 2021-11-30</span>
+
+To be truly reproducible, the PDF file we create must always be exactly the same.
+This is currently not the case for two reasons:
+
+ * LaTeX likes to put the generation date into the document.
+   This obviously happens when you query it e.g. with `\today`, but the date also gets filled into the PDF's *Creation date* attribute.
+ * The resulting PDF has a seemingly random ID value added into the PDF's xref table.
+
+The fix to the first problem depends a bit on whether you're using `\today`, and if so, what for.
+For example, when rendering a letter, you *do want* the date on the letter to be the one from when you generated it (or more precisely, when you sent it, but we cannot do anything about it after the PDF has been created).
+
+The tool we need to solve the problem is the environment variable `SOURCE_DATE_EPOCH`.
+If we set it to a Unix timestamp, LaTeX will use that instead of the current date.
+We thus modify the call to `latexmk` like this:
+
+{% highlight plain %}
+env TEXMFHOME=.cache TEXMFVAR=.cache/texmf-var \
+   SOURCE_DATE_EPOCH=${toString self.lastModified} \
+   latexmk -interaction=nonstopmode -pdf -lualatex \
+   document.tex
+{% endhighlight %}
+
+`self.lastModified` is set to the Unix timestamp of the last commit in our repository.
+This seems to be a reasonable date to set, but in the case of a letter, I would actually advise to explicitly set the date, e.g.
+
+{% highlight plain %}
+env TEXMFHOME=.cache TEXMFVAR=.cache/texmf-var \
+  SOURCE_DATE_EPOCH=$(date -d "2021-11-30" +%s) \
+  latexmk -interaction=nonstopmode -pdf -lualatex \
+  document.tex
+{% endhighlight %}
+
+This way, you will always know when you sent the letter.
+I used the `date` utility so that the date is readable.
+You can of course put it into a nix variable in the Flake and interpolate it into the command if you want.
+
+Now that we have fixed the date, we still have the ID.
+That ID is actually calculated from the system date and time, and the full path of the generated PDF file, and thus we won't be able to modify it to our needs from the outside.
+There are however TeX commands we can use:
+
+{% highlight latex %}
+% LuaTeX
+\pdfvariable suppressoptionalinfo 512\relax
+% pdfTeX
+\pdftrailerid{}
+% XeTeX
+\special{pdf:trailerid [
+    <00112233445566778899aabbccddeeff>
+    <00112233445566778899aabbccddeeff>
+]}
+{% endhighlight %}
+
+XeTeX is the only backend that seems not to be able to omit the ID, so the command is setting it to some literal value.
+Since we're using LuaLaTeX, we want the LuaTeX solution.
+And since this is irrelevant to the document's content, let's prepend it to the input via latexmk:
+
+{% highlight plain %}
+env TEXMFHOME=.cache TEXMFVAR=.cache/texmf-var \
+  SOURCE_DATE_EPOCH=$(date -d "2021-11-30" +%s) \
+  latexmk -interaction=nonstopmode -pdf -lualatex \
+  -pretex="\pdfvariable suppressoptionalinfo 512\relax" \
+  -usepretex document.tex
+{% endhighlight %}
+
+With this, we now have a truly reproducible PDF output.
+Now, let's move onto something more practical:
 
 ## TeX Live Packages
 
@@ -267,7 +335,7 @@ We can then include it in our `flake.nix`:
       };
     in rec {
       packages = {
-        document = pkgs.stdenvNoCC.mkDerivation {
+        document = pkgs.stdenvNoCC.mkDerivation rec {
           name = "latex-demo-document";
           src = self;
           buildInputs = [ pkgs.coreutils tex ];
@@ -276,9 +344,12 @@ We can then include it in our `flake.nix`:
             export PATH="${pkgs.lib.makeBinPath buildInputs}";
             mkdir -p .cache/texmf-var
             ln -s ${copse} Copse-Regular.ttf
-            env TEXMFHOME=.cache TEXMFVAR=.cache/texmf-var \
+            env TEXMFHOME=.cache \
+                TEXMFVAR=.cache/texmf-var \
+                SOURCE_DATE_EPOCH=${toString self.lastModified} \
               latexmk -interaction=nonstopmode -pdf -lualatex \
-              document.tex
+              -pretex="\pdfvariable suppressoptionalinfo 512\relax"
+              -usepretex document.tex
           '';
           installPhase = ''
             mkdir -p $out
@@ -380,7 +451,9 @@ For this, we remove the *build* step from our package and modify the *install* s
             env TEXMFHOME="\$DIR/.cache" \
                 TEXMFVAR="\$DIR/.cache/texmf-var" \
               latexmk -interaction=nonstopmode -pdf -lualatex \
-              -output-directory="\$DIR" document.tex
+              -output-directory="\$DIR" \
+              -pretex="\pdfvariable suppressoptionalinfo 512\relax" \
+              -usepretex document.tex
             mv "\$DIR/document.pdf" \$RES
             rm -rf "\$DIR"
             EOF
@@ -399,6 +472,9 @@ That is achieved by putting them in the `propagatedBuildInputs`.
 
 Let me clarify what is happening with all the dollar signs:
 `${…}` is an expression processed by Nix, `$out` is processed by bash when executing the *install* phase, and `\$DIR` is written by bash as `$DIR` into our generated script.
+
+I removed `SOURCE_DATE_EPOCH` since when our derivation is a generator, we might want to use the actual generation date.
+Since the PDF itself is not part of the derivation anymore, it is okay to generate different documents depending on the date; and the user can *still* set the variable when calling the generator to inject a custom date.
 
 Our output directory now the generated script in `bin`, and `document.tex` and `Copse-Regular.ttf` in `share` as we need those files at runtime to build the document.
 While our build environment provided a temporary directory to build the document before, we now need to create one manually via `mktemp -d` so that the current working directory is not cluttered with intermediate LaTeX files – the user only wants the resulting `.pdf` file.
@@ -469,6 +545,12 @@ In our `flake.nix`, we now update the `latexmk` call to define those two command
   https://github.com/google/fonts/raw/main/ofl/copse/Copse-Regular.ttf;
         sha256 = "sha256-uFLmgvDGbeTbGDX4VF/y6UdhVJmHpGB0R7Bp6XP1Cx0=";
       };
+      # make variables more visible to defining them here
+      vars = [ "sender" "receiver" ];
+      # expands to definitions like \def\sender{\$1} which are then put
+      # into our generation script and will fill the vars with $1, $2 etc.
+      texvars = toString
+        (pkgs.lib.imap1 (i: n: ''\def\${n}{${"\\$" + (toString i)}}'') vars);
     in rec {
       packages = {
         document = pkgs.stdenvNoCC.mkDerivation rec {
@@ -490,8 +572,8 @@ In our `flake.nix`, we now update the `latexmk` call to define those two command
                 TEXMFVAR="\$DIR/.cache/texmf-var" \
               latexmk -interaction=nonstopmode -pdf -lualatex \
               -output-directory="\$DIR" \
-              -pretex="\def\sender{\$1}\def\receiver{\$2}" -usepretex \
-              document.tex
+              -pretex="\pdfvariable suppressoptionalinfo 512\relax${texvars}" \
+              -usepretex document.tex
             mv "\$DIR/document.pdf" \$RES
             rm -rf "\$DIR"
             EOF
