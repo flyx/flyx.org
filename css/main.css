@@ -118,20 +118,24 @@ nav > ul > li > a:active {
   background-color: var(--color-medium-highlight);
 }
 
-article {
+main {
   flex: 1 1 auto;
   margin: 0;
-  padding: 1em;
-  text-align: justify;
-  hyphens: auto;
-  line-height: 150%;
+  padding: 0;
   max-height: 100vh;
   box-sizing: border-box;
   overflow-y: auto;
 }
 
-article > * {
-  max-width: 82ch;
+article {
+  margin: 0;
+  padding: 1em;
+  hyphens: auto;
+  line-height: 150%;
+}
+
+article {
+  max-width: 84ch;
   box-sizing: border-box;
 }
 
@@ -162,6 +166,8 @@ article > header > h1 {
   font-size: x-large;
   font-weight: bold;
   margin: 0;
+  padding: .125em 0;
+  line-height: 150%;
 }
 
 article > header > span.date {
@@ -174,11 +180,27 @@ article > header > span.date {
 article h2 {
   font-size: large;
   font-weight: bold;
+  line-height: 150%;
 }
 
 article h3 {
   font-size: medium;
   font-weight: bold;
+  line-height: 150%;
+}
+
+article > header,
+article > h2,
+article > h3 {
+  border-top: 1px solid var(--color-text);
+  border-bottom: 1px solid var(--color-text);
+  background: #1a1a12;
+  margin: .25em 0;
+  padding: .125em 0;
+}
+
+article p {
+  text-align: justify;
 }
 
 article img {

@@ -47,15 +47,16 @@
         </li>
       </ul>
     </nav>
-    <article>
-      <header>
-        <h1>{{ page.title }}</h1>
-        <span class="date">{{ page.date }}</span>
-      </header>
-
-      {{ content }}
-    </article>
-
+    <main>
+      <article>
+        <header>
+          <h1>{{ page.title }}</h1>
+          <span class="date">{{ page.date }}</span>
+        </header>
+  
+        {{ content }}
+      </article>
+    </main>
     <script>
       document.querySelector("a.header").addEventListener("click", function(e) {
         const nav = this.parentNode;
