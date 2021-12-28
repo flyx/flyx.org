@@ -292,7 +292,7 @@ Don't forget to check out the new document we can now create with `nix build`!
 ## System Fonts <span class="note">rewritten 2021-12-28</span>
 
 While TeX Live does provide us with a lot of fonts to choose from, we might eventually want to use a font no available there.
-Assume we want to use the [Fire Code](https://github.com/tonsky/FiraCode).
+Assume we want to use the [Fira Code](https://github.com/tonsky/FiraCode).
 This font is packaged in `nixpkgs.fira-code`.
 Let's have a quick look at what is contained in that package:
 
@@ -325,7 +325,7 @@ Let's update `flake.nix`:
         nicematrix fontspec;
       };
     in rec {
-      packages = = {
+      packages = {
         document = pkgs.stdenvNoCC.mkDerivation rec {
           name = "latex-demo-document";
           src = self;
@@ -348,7 +348,7 @@ Let's update `flake.nix`:
       # […]
 {% endhighlight %}
 
-We can now reference to the font in our document.
+We can now reference the font in our document.
 However, we might not be completely sure about the name we need to use to refer to the font – is it `FiraCode`, `Fira-Code` or `Fira Code`?
 Font files tend to be a bit inconsistent about this.
 So let us check it:
