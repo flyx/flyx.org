@@ -6,6 +6,7 @@ kind: article
 permalink: /nix-flakes-latex/
 weight: 4
 date: 2021-11-17
+updated: 2021-12-28
 ---
 
 This article shows how to use [Nix Flakes](https://nixos.wiki/wiki/Flakes) to build LaTeX documents.
@@ -127,7 +128,6 @@ readlink result
 And it points to our `/nix/store`.
 
 As shown by this minimal example, our `flake.nix` is not just a build system, but also manages all dependencies that are required to build our document.
-Now, let's explore what happens when we use packages in our LaTeX document.
 
 ## Producing Identical Documents <span class="note">added 2021-11-30</span>
 
@@ -194,8 +194,8 @@ env TEXMFHOME=.cache TEXMFVAR=.cache/texmf-var \
   -usepretex document.tex
 {% endhighlight %}
 
-With this, we now have a truly reproducible PDF output.
-Now, let's move onto something more practical:
+With this, we have a truly reproducible PDF output.
+Now, let's explore what happens when we use packages in our LaTeX document.
 
 ## TeX Live Packages
 
@@ -289,67 +289,55 @@ I would say that starting with `scheme-basic` is generally fine.
 
 Don't forget to check out the new document we can now create with `nix build`!
 
-## Beyond TeX Live
+## System Fonts <span class="note">rewritten 2021-12-28</span>
 
-Now assume we want to use the [Copse Font](https://github.com/google/fonts/tree/main/ofl/copse) in our document.
-This font is not available via TeX Live, nor in *nixpkgs*.
-What do we do?
-
-The first thing that might come to mind is *could we just declare this as input?*
-But let's think about what inputs are:
-They are parameters of our outputs, which is useful because we don't want to change our Flake just because an input released a new version.
-`flake.lock` gives us control over whether we want to switch to a newer version of our input.
-
-However, a font is hardly a resource that gets updates, and thus we don't need the inputs system to manage it.
-Instead, we will just refer to it with a static URL, and give its expected hash to ensure we get the expected version.
-To calculate the hash, we will *prefetch* the font via its URL:
+While TeX Live does provide us with a lot of fonts to choose from, we might eventually want to use a font no available there.
+Assume we want to use the [Fire Code](https://github.com/tonsky/FiraCode).
+This font is packaged in `nixpkgs.fira-code`.
+Let's have a quick look at what is contained in that package:
 
 {% highlight bash %}
-nix store prefetch-file \
-  https://github.com/google/fonts/raw/main/ofl/copse/Copse-Regular.ttf
+nix shell nixpkgs#fira-code -c bash
+STORE_PATH=$(nix eval --raw --impure --expr "(import <nixpkgs> {}).fira-code.outPath")
+(cd $STORE_PATH && du -a .)
+exit # the shell we just started
 {% endhighlight %}
 
-This will load the font into our `/nix/store` and output its hash.
-We can then include it in our `flake.nix`:
+(I'm using bash here because syntax is different for some shells like *fish*, and `nix shell`, unlike the old `nix-shell`, by default launches your default shell.)
+This gives us:
+
+    560	./share/fonts/truetype/FiraCode-VF.ttf
+    560	./share/fonts/truetype
+    560	./share/fonts
+    560	./share
+    560	.
+
+Now we need to set the `OSFONTDIR` environment variable so that LuaTeX can find it (mind that having the font package as build input does not make the font visible to LuaTeX).
+We also need to add `fontspec` to our `tex` package.
+Let's update `flake.nix`:
 
 {% highlight nix %}
-{
-  description = "LaTeX Document Demo";
-  inputs = {
-    nixpkgs.url = github:NixOS/nixpkgs/nixos-21.05;
-    flake-utils.url = github:numtide/flake-utils;
-  };
-    
-  outputs = { self, nixpkgs, flake-utils }:
-    with flake-utils.lib; eachSystem allSystems (system:
+    # […]
     let
       pkgs = nixpkgs.legacyPackages.${system};
       tex = pkgs.texlive.combine {
-        inherit (pkgs.texlive) scheme-basic latexmk
-        pgf nicematrix fontspec;
-      };
-      copse = pkgs.fetchurl {
-        url =
-  https://github.com/google/fonts/raw/main/ofl/copse/Copse-Regular.ttf;
-        sha256 = "sha256-uFLmgvDGbeTbGDX4VF/y6UdhVJmHpGB0R7Bp6XP1Cx0=";
+        inherit (pkgs.texlive) scheme-minimal latex-bin latexmk
+        nicematrix fontspec;
       };
     in rec {
-      packages = {
+      packages = = {
         document = pkgs.stdenvNoCC.mkDerivation rec {
           name = "latex-demo-document";
           src = self;
-          buildInputs = [ pkgs.coreutils tex ];
+          buildInputs = [ pkgs.coreutils pkgs.fira-code tex ];
           phases = ["unpackPhase" "buildPhase" "installPhase"];
           buildPhase = ''
             export PATH="${pkgs.lib.makeBinPath buildInputs}";
             mkdir -p .cache/texmf-var
-            ln -s ${copse} Copse-Regular.ttf
-            env TEXMFHOME=.cache \
-                TEXMFVAR=.cache/texmf-var \
-                SOURCE_DATE_EPOCH=${toString self.lastModified} \
+            env TEXMFHOME=.cache TEXMFVAR=.cache/texmf-var \
+                OSFONTDIR=${pkgs.fira-code}/share/fonts \
               latexmk -interaction=nonstopmode -pdf -lualatex \
-              -pretex="\pdfvariable suppressoptionalinfo 512\relax"
-              -usepretex document.tex
+              document.tex
           '';
           installPhase = ''
             mkdir -p $out
@@ -357,49 +345,86 @@ We can then include it in our `flake.nix`:
           '';
         };
       };
-      defaultPackage = packages.document;
-    });
-}
+      # […]
 {% endhighlight %}
 
-Note how we import the downloaded font into the build directory via symlink.
-`${copse}` simply expands to the font's path in `/nix/store`.
+We can now reference to the font in our document.
+However, we might not be completely sure about the name we need to use to refer to the font – is it `FiraCode`, `Fira-Code` or `Fira Code`?
+Font files tend to be a bit inconsistent about this.
+So let us check it:
 
-With that done, let's use the font in our `document.tex`.
-We'll set it up as the standard monospace font and make the second column of our tabular use it:
+{% highlight bash %}
+nix shell nixpkgs#fira-code nixpkgs#fontconfig -c bash
+STORE_PATH=$(nix eval --raw --impure --expr "(import <nixpkgs> {}).fira-code.outPath")
+fc-scan $STORE_PATH/share/fonts/truetype/FiraCoed-VF.ttf | grep family
+exit
+{% endhighlight %}
+
+This will give us some lines like
+
+    family: "Fira Code"(s) "Fira Code Light"(s)
+
+the latter, `Fira Code Light`, is the correct one (I am not quite sure why, but the former won't work).
+Thus, we update our `document.tex`:
 
 {% highlight latex %}
 \documentclass[a4paper]{article}
 
 \usepackage{fontspec}
-\setmonofont{Copse}[Path=./, Extension=.ttf, UprightFont=Copse-Regular]
+\setmonofont{Fira Code Light}
 
 \usepackage{nicematrix}
 
 \begin{document}
-    \begin{NiceTabular}{p{5.5cm}|>{\ttfamily}p{2cm}}
-    \CodeBefore
-        \rowcolors{2}{white}{gray!30}
-    \Body \hline
-        droggel & 23 \\ \hline
-        jug     & 42 \\ \hline
-    \end{NiceTabular}
+  \begin{NiceTabular}{p{5.5cm}|>{\ttfamily}p{2cm}}
+  \CodeBefore
+    \rowcolors{2}{white}{gray!30}
+  \Body \hline
+    droggel & 23 \\ \hline
+    jug     & 42 \\ \hline
+  \end{NiceTabular}
 \end{document}
 {% endhighlight %}
 
-Update git and build:
+Save and run `nix build`.
+The second column in the document will now use the *Fira Code* font.
+Success!
 
-{% highlight bash %}
-git commit -a --amend --no-edit
-nix build
+### Local Font Files
+
+You may want to use fonts that are neither available as TeX Live package, nor in nixpkgs.
+Maybe you want to use a fancy commercial font.
+While it is no problem to append the working directory or a `fonts` subdirectory to `OSFONTDIR`, you can also define a separate derivation for that font:
+
+{% highlight nix %}
+    # […]
+    let
+      pkgs = nixpkgs.legacyPackages.${system};
+      my-font = pkgs.stdenvNoCC.mkDerivation {
+        pname = "my-font";
+        version = "1.0.0";
+        src = self;
+        phases = [ "unpackPhase" "installPhase" ];
+        installPhase = ''
+          mkdir -p $out/share/fonts/truetype
+          cp my-font.ttf $out/share/fonts/truetype
+        '';
+      };
+      tex = pkgs.texlive.combine {
+        inherit (pkgs.texlive) scheme-minimal latex-bin latexmk
+        nicematrix fontspec;
+      };
+    in rec {
+      # […]
 {% endhighlight %}
 
-You should have a nice `result/document.pdf` that uses the Copse font.
+Then, you can use the font just like a font from nixpkgs.
+Actually, you want to have that font package in a separate flake, because if you set `src = self;` here, this derivation will unnecessarily be rebuilt every time anything in your repository changes.
+You can refer to local flakes as inputs to your document flake if you don't want to publish the font flake.
 
-This section has shown how we can depend on any resource available on the internet.
-Of course, there is always the possibility of resources vanishing – if this is a concern, you can simply put the font file in your repository instead.
+Finally, if a font is available somewhere on the internet, you can either use `pkgs.fetchurl` to retrieve it when building, or declare it as input to your Nix Flake.
 
-## Configurable Documents
+## Configurable Documents <span class="note">improved 2021-12-28</span>
 
 Having a single document as output is fine for a lot of use-cases.
 But what if our document has data inputs, for example because we want to generate bulk letters?
@@ -426,37 +451,38 @@ For this, we remove the *build* step from our package and modify the *install* s
         inherit (pkgs.texlive) scheme-basic latexmk
         pgf nicematrix fontspec;
       };
-      copse = pkgs.fetchurl {
-        url =
-  https://github.com/google/fonts/raw/main/ofl/copse/Copse-Regular.ttf;
-        sha256 = "sha256-uFLmgvDGbeTbGDX4VF/y6UdhVJmHpGB0R7Bp6XP1Cx0=";
-      };
     in rec {
       packages = {
         document = pkgs.stdenvNoCC.mkDerivation rec {
           name = "latex-demo-document";
           src = self;
-          propagatedBuildInputs = [ pkgs.coreutils tex ];
-          phases = ["unpackPhase" "installPhase"];
-          installPhase = ''
-            mkdir -p $out/{bin,share}
-            ln -s ${copse} $out/share/Copse-Regular.ttf
-            cp document.tex $out/share/document.tex
-            cat <<EOF >$out/bin/latex-demo-document
+          propagatedBuildInputs = [ pkgs.coreutils pkgs.fira-code tex ];
+          phases = ["unpackPhase" "buildPhase" "installPhase"];
+          SCRIPT = ''
+            #!/bin/bash
+            prefix=${builtins.placeholder "out"}
             export PATH="${pkgs.lib.makeBinPath propagatedBuildInputs}";
-            DIR=\$(mktemp -d)
-            RES=\$(pwd)/document.pdf
-            cd $out/share
-            mkdir -p "\$DIR/.texcache/texmf-var"
-            env TEXMFHOME="\$DIR/.cache" \
-                TEXMFVAR="\$DIR/.cache/texmf-var" \
+            DIR=$(mktemp -d)
+            RES=$(pwd)/document.pdf
+            cd $prefix/share
+            mkdir -p "$DIR/.texcache/texmf-var"
+            env TEXMFHOME="$DIR/.cache" \
+                TEXMFVAR="$DIR/.cache/texmf-var" \
+                OSFONTDIR=${pkgs.fira-code}/share/fonts \
               latexmk -interaction=nonstopmode -pdf -lualatex \
-              -output-directory="\$DIR" \
+              -output-directory="$DIR" \
               -pretex="\pdfvariable suppressoptionalinfo 512\relax" \
               -usepretex document.tex
-            mv "\$DIR/document.pdf" \$RES
-            rm -rf "\$DIR"
-            EOF
+            mv "$DIR/document.pdf" $RES
+            rm -rf "$DIR"
+          '';
+          buildPhase = ''
+            printenv SCRIPT >latex-demo-document
+          '';
+          installPhase = ''
+            mkdir -p $out/{bin,share}
+            cp document.tex $out/share/document.tex
+            cp latex-demo-document $out/bin/latex-demo-document
             chmod u+x $out/bin/latex-demo-document
           '';
         };
@@ -470,14 +496,21 @@ Mind how our `buildInputs` have moved to `propagatedBuildInputs`.
 This is because these are now runtime dependencies and thus need to be part of the closure of the generated derivation.
 That is achieved by putting them in the `propagatedBuildInputs`.
 
-Let me clarify what is happening with all the dollar signs:
-`${…}` is an expression processed by Nix, `$out` is processed by bash when executing the *install* phase, and `\$DIR` is written by bash as `$DIR` into our generated script.
+I put the script we output into a variable `SCRIPT`, which will be available as environment variable during our build.
+Originally, I used `cat` with a HEREDOC to write the script, however that was horrible since all `$` that should be in the final script would have needed to be escaped.
+Using `printenv` is far cleaner.
+Note how we use `builtins.placeholder` to access the output directory since `$out` is a build-time variable and therefore not available in our script, which runs at runtime.
+`builtins.placeholder` outputs the correct path at build time.
 
 I removed `SOURCE_DATE_EPOCH` since when our derivation is a generator, we might want to use the actual generation date.
 Since the PDF itself is not part of the derivation anymore, it is okay to generate different documents depending on the date; and the user can *still* set the variable when calling the generator to inject a custom date.
 
-Our output directory now the generated script in `bin`, and `document.tex` and `Copse-Regular.ttf` in `share` as we need those files at runtime to build the document.
-While our build environment provided a temporary directory to build the document before, we now need to create one manually via `mktemp -d` so that the current working directory is not cluttered with intermediate LaTeX files – the user only wants the resulting `.pdf` file.
+Our output directory now contains the generated script in `bin`, and `document.tex` in `share` as we need those files at runtime to build the document.
+If you use any other local files (fonts, images, etc) in your document, you need to copy those as well.
+
+Before, our build environment provided a temporary directory to build the document.
+Now with our script, we don't have that anymore – the user may call the script from anywhere and that is our working directory then.
+Therefore, we need to create a temporary directory manually via `mktemp -d` so that the current working directory is not cluttered with intermediate LaTeX files – the user only wants the resulting `.pdf` file.
 This also ensures that any files existing in the working directory do not affect our build.
 
 Fun fact: By explicitly depending on `pkgs.coreutils`, we circumvent a problem with `mktemp` that haunts macOS and BSD users:
@@ -507,7 +540,7 @@ We will set this up in our flake in a moment, for now let's assume the commands 
 \documentclass[a4paper]{article}
 
 \usepackage{fontspec}
-\setmonofont{Copse}[Path=./, Extension=.ttf, UprightFont=Copse-Regular]
+\setmonofont{Fira Code Light}
 
 \usepackage{nicematrix}
 
@@ -531,7 +564,7 @@ In our `flake.nix`, we now update the `latexmk` call to define those two command
     nixpkgs.url = github:NixOS/nixpkgs/nixos-21.05;
     flake-utils.url = github:numtide/flake-utils;
   };
-
+  
   outputs = { self, nixpkgs, flake-utils }:
     with flake-utils.lib; eachSystem allSystems (system:
     let
@@ -540,43 +573,44 @@ In our `flake.nix`, we now update the `latexmk` call to define those two command
         inherit (pkgs.texlive) scheme-basic latexmk
         pgf nicematrix fontspec;
       };
-      copse = pkgs.fetchurl {
-        url =
-  https://github.com/google/fonts/raw/main/ofl/copse/Copse-Regular.ttf;
-        sha256 = "sha256-uFLmgvDGbeTbGDX4VF/y6UdhVJmHpGB0R7Bp6XP1Cx0=";
-      };
       # make variables more visible to defining them here
       vars = [ "sender" "receiver" ];
-      # expands to definitions like \def\sender{\$1} which are then put
-      # into our generation script and will fill the vars with $1, $2 etc.
+      # expands to definitions like \def\sender{$1}, i.e. each variable
+      # will be set to the command line argument at the variable's position.
       texvars = toString
-        (pkgs.lib.imap1 (i: n: ''\def\${n}{${"\\$" + (toString i)}}'') vars);
+        (pkgs.lib.imap1 (i: n: ''\def\${n}{${"$" + (toString i)}}'') vars);
     in rec {
       packages = {
         document = pkgs.stdenvNoCC.mkDerivation rec {
           name = "latex-demo-document";
           src = self;
-          propagatedBuildInputs = [ pkgs.coreutils tex ];
-          phases = ["unpackPhase" "installPhase"];
-          installPhase = ''
-            mkdir -p $out/{bin,share}
-            ln -s ${copse} $out/share/Copse-Regular.ttf
-            cp document.tex $out/share/document.tex
-            cat <<EOF >$out/bin/latex-demo-document
+          propagatedBuildInputs = [ pkgs.coreutils pkgs.fira-code tex ];
+          phases = ["unpackPhase" "buildPhase" "installPhase"];
+          SCRIPT = ''
+            #!/bin/bash
+            prefix=${builtins.placeholder "out"}
             export PATH="${pkgs.lib.makeBinPath propagatedBuildInputs}";
-            DIR=\$(mktemp -d)
-            RES=\$(pwd)/document.pdf
-            cd $out/share
-            mkdir -p "\$DIR/.texcache/texmf-var"
-            env TEXMFHOME="\$DIR/.cache" \
-                TEXMFVAR="\$DIR/.cache/texmf-var" \
+            DIR=$(mktemp -d)
+            RES=$(pwd)/document.pdf
+            cd $prefix/share
+            mkdir -p "$DIR/.texcache/texmf-var"
+            env TEXMFHOME="$DIR/.cache" \
+                TEXMFVAR="$DIR/.cache/texmf-var" \
+                OSFONTDIR=${pkgs.fira-code}/share/fonts \
               latexmk -interaction=nonstopmode -pdf -lualatex \
-              -output-directory="\$DIR" \
+              -output-directory="$DIR" \
               -pretex="\pdfvariable suppressoptionalinfo 512\relax${texvars}" \
               -usepretex document.tex
-            mv "\$DIR/document.pdf" \$RES
-            rm -rf "\$DIR"
-            EOF
+            mv "$DIR/document.pdf" $RES
+            rm -rf "$DIR"
+          '';
+          buildPhase = ''
+            printenv SCRIPT >latex-demo-document
+          '';
+          installPhase = ''
+            mkdir -p $out/{bin,share}
+            cp document.tex $out/share/document.tex
+            cp latex-demo-document $out/bin/latex-demo-document
             chmod u+x $out/bin/latex-demo-document
           '';
         };
@@ -611,4 +645,19 @@ Now you might wonder, what do we really *need* all this for?
 Are LaTeX documents not like „write once, typeset, never touch the source again“?
 Well, I'll have you know that I regularly build my pen & paper character sheets with LaTeX, they *are* fillable with values and *do* depend on external artwork.
 The sources for that [are available on GitHub](https://github.com/flyx/DSA-4.1-Heldendokument) if you want to have a look, but be warned that everything is German.
-You're welcome to come up with your own obscure use-case ;).
+
+Apart from that, I stumbled upon LaTeX code that just didn't want to compile with modern TeX Live more than once.
+Using Nix Flakes also makes me feel safe enough to *not* commit the PDF file to the repository (just in case the source doesn't compile at some point in the future).
+
+## Changelog
+
+### 2021-12-28
+
+ * Rewrote the section about fonts. Originally it described how to download a font from the internet and use it, but the more likely use-case would be to fetch fonts from nixpkgs.
+   Therefore, the article now shows how to do that, and just mentions that you can also fetch one from some URL.
+ * Also, use `OSFONTDIR` to tell LuaTeX where to find the font instead, which is more versatile than explicitly referencing a local path in the TeX source.
+ * Instead of using `cat` and a HEREDOC to output a script, the code now uses an env variable which removes the need for crazy `$` escaping everywhere.
+
+### 2021-11-30
+
+ * Added section describing how to produce identical documents.

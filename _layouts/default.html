@@ -53,6 +53,10 @@
           <h1>{{ page.title }}</h1>
           <span class="date">{{ page.date }}</span>
         </header>
+        
+        {%- if page.updated %}
+        <p class="updated">Last updated {{ page.updated }}, see <a href="#changelog">Changelog</a></p>
+        {%- endif %}
   
         {{ content }}
       </article>

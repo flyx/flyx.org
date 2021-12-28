@@ -1,3 +1,5 @@
 _site
 build
 .jekyll-cache/
+result
+flyx.org

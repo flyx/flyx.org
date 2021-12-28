@@ -177,6 +177,10 @@ article > header > span.date {
   display: inline-block;
 }
 
+article > p.updated {
+  font-size: small;
+}
+
 article h2 {
   font-size: large;
   font-weight: bold;
