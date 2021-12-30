@@ -6,7 +6,7 @@ kind: article
 permalink: /nix-flakes-latex/
 weight: 4
 date: 2021-11-17
-updated: 2021-12-28
+updated: 2021-12-30
 ---
 
 This article shows how to use [Nix Flakes](https://nixos.wiki/wiki/Flakes) to build LaTeX documents.
@@ -297,20 +297,19 @@ This font is packaged in `nixpkgs.fira-code`.
 Let's have a quick look at what is contained in that package:
 
 {% highlight bash %}
-nix shell nixpkgs#fira-code -c bash
-STORE_PATH=$(nix eval --raw --impure --expr "(import <nixpkgs> {}).fira-code.outPath")
-(cd $STORE_PATH && du -a .)
-exit # the shell we just started
+nix eval nixpkgs#fira-code.outPath --raw | xargs du -a
 {% endhighlight %}
 
-(I'm using bash here because syntax is different for some shells like *fish*, and `nix shell`, unlike the old `nix-shell`, by default launches your default shell.)
-This gives us:
+(Output may be nicer with `tree` or `exa -T` if you have it).
+This gives us (store path stripped):
 
-    560	./share/fonts/truetype/FiraCode-VF.ttf
-    560	./share/fonts/truetype
-    560	./share/fonts
-    560	./share
-    560	.
+{% highlight plain %}
+560	[...]/share/fonts/truetype/FiraCode-VF.ttf
+560	[...]/share/fonts/truetype
+560	[...]/share/fonts
+560	[...]/share
+560	[...]
+{% endhighlight %}
 
 Now we need to set the `OSFONTDIR` environment variable so that LuaTeX can find it (mind that having the font package as build input does not make the font visible to LuaTeX).
 We also need to add `fontspec` to our `tex` package.
@@ -354,15 +353,17 @@ Font files tend to be a bit inconsistent about this.
 So let us check it:
 
 {% highlight bash %}
-nix shell nixpkgs#fira-code nixpkgs#fontconfig -c bash
-STORE_PATH=$(nix eval --raw --impure --expr "(import <nixpkgs> {}).fira-code.outPath")
-fc-scan $STORE_PATH/share/fonts/truetype/FiraCoed-VF.ttf | grep family
-exit
+nix eval nixpkgs#fira-code.outPath --raw | \
+  xargs -J % nix shell nixpkgs#fontconfig -c \
+  fc-scan %/share/fonts/truetype/FiraCode-VF.ttf | \
+  grep family
 {% endhighlight %}
 
 This will give us some lines like
 
-    family: "Fira Code"(s) "Fira Code Light"(s)
+{% highlight plain %}
+family: "Fira Code"(s) "Fira Code Light"(s)
+{% endhighlight %}
 
 the latter, `Fira Code Light`, is the correct one (I am not quite sure why, but the former won't work).
 Thus, we update our `document.tex`:
@@ -650,6 +651,10 @@ Apart from that, I stumbled upon LaTeX code that just didn't want to compile wit
 Using Nix Flakes also makes me feel safe enough to *not* commit the PDF file to the repository (just in case the source doesn't compile at some point in the future).
 
 ## Changelog
+
+### 2021-12-30
+
+ * Simplified commands to not use subshells.
 
 ### 2021-12-28
 

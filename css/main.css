@@ -132,9 +132,6 @@ article {
   padding: 1em;
   hyphens: auto;
   line-height: 150%;
-}
-
-article {
   max-width: 84ch;
   box-sizing: border-box;
 }
@@ -264,4 +261,8 @@ section.projects > a > h3 {
 
 section.projects > a > p {
   margin: 0;
+}
+
+code {
+  hyphens: none;
 }
