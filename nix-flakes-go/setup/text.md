@@ -1,59 +1,89 @@
 ## Setup
 
 Create an empty directory, this will be the directory of our main application.
-In it, do:
-
-{% highlight plain %}
-mkdir -p externals/simple-plugin
-git init
-{% endhighlight %}
-
-Since we do not want to set up multiple repositories on some Git hoster, we'll use the `externals` directory to simulate external repositories.
-We will never reference `externals` as if it was a local directory; it will only ever be referenced in Flake inputs.
-As with any Nix Flake, we need all files processed by Nix to be checked in to version control, which is why we `git init`.
+As with any Nix Flake, we need all files processed by Nix to be checked in to version control, so initialize a git repository with `git init`.
 
 We'll be using Go modules, so do this in the main directory:
 
 {% highlight bash %}
-nix run nixpkgs#go mod init "mainapp"
+nix run nixpkgs#go mod init "example.com/mainapp"
 {% endhighlight %}
 
 This will give us a `go.mod` file.
+We use `example.com` as domain because by convention, any Go module path starts with a domain.
+The domain isn't used for querying anything.
 Now, let's write a simple main application in `main.go`:
 
-{{main.go}}
+{% highlight go %}
+{% include_relative main.go %}
+{% endhighlight %}
 
 To finish the main application, we provide it with a `flake.nix`:
 
-{{flake.nix}}
+{% highlight nix %}
+{% include_relative flake.nix %}
+{% endhighlight %}
 
-For `vendorSha256` just supply `pkgs.lib.fakeSha256` initially and then build once.
-Then, update the value to be the one that was expected as given in the error message.
+Let's have an overview of what's going on here:
 
-We use `nix-filter` to explicitly exclude the externals from the sources of the main app, and also the `flake.nix` which is something sensible to do.
-If we don't exclude `flake.nix`, any change there would trigger a rebuild even if it was unnecessary.
-Mind that `nix-filter` doesn't work on `self` so you need to give `./.`.
+ * We use `nix-filter` to explicitly exclude the `flake.nix` which is something sensible to do.
+   If we don't exclude `flake.nix`, any change there would trigger a rebuild even if it was unnecessary.
+   Mind that `nix-filter` doesn't work on `self` so you need to give `./.`.
+   We also exclude `externals` which doesn't exist yet but we will use it later for our plugins.
+ * The `buildApp` function takes an instance of `nixpkgs`, along with a list of plugins, as input, and builds our application.
+   It additionally needs a `vendorSha256`, which is the hash over all external Go modules.
+   Since that hash changes if we include plugins, the value must be provided as argument.
+ * You may wonder how to know the `vendorSha256` value, and the one I give here may be wrong depending on your nixpkg's Go version.
+   To know the hash you need to use, just give `pkgs.lib.fakeSha256` initially and build once.
+   Then, update the value to be the one that was expected as given in the error message.
+ * The `pluginMetadata` function takes the path to a `go.mod` file as input and crudely extracts the module's name from it.
+   It will not work for any variation of the syntax that is allowed, but works for canonical files generated via `go mod init`, which is good enough.
+ * In `buildApp`, we see that plugins are to provide a set `goPlugin` which is to contain the plugin's module name.
+   Basically, we recognize a derivation being a plugin by asserting it has a `goPlugin` attribute.
+   In an actual application, we'd use a more specialized name to ensure it is a plugin for *our* application.
 
+Now let us talk about the code we generate in `buildApp`.
+There are basically two ways to integrate plugin code in our build:
+Either put it into the main app's module, or have it be an own module and reference it.
+The first approach would be very inflexible because the plugin couldn't reference any external modules apart from those the main app references.
+Therefore, we use the second approach.
+This is why we have `pluginMetadata` to extract the plugin module's name:
+A plugin shall use that function to generate its `goPlugin` attribute.
+
+`GO_MOD_APPEND` creates a `require` directive for each plugin, so that the plugin's Go module is a dependency, and a `replace` directive that tells Go that the plugin's module is to be found at the specified path, which is the `src` directory inside the `outPath` of the plugin.
+Note that this approach would also be feasible to manage normal Go dependencies via Nix Flakes, instead of listing them in `go.mod`.
+However, the build modifying `go.mod` is not all that great, because if you do that within `nix develop` in the source directory, you modify checked-in source files.
+Let's keep that in mind.
+
+Now only referencing the plugin in `go.mod` does not suffice, the Go code also needs to reference it.
+Therefore we generate a `plugin.go` file from the list of plugins that does that.
+
+To not overcrowd the `flake.nix`, we put the template for `plugins.go` in an own file, `plugins.go.nix`:
+
+{% highlight nix %}
+{% include_relative plugins.go.nix %}
+{% endhighlight %}
+
+The comment line has a standard format recognized by Go that tells the compiler the file is autogenerated.
+That is useful for tooling that, for example, checks code style, which should not be done on autogenerated files.
+For each plugin, we write an import line `_ = "<module path>"`.
+The underscore means that it's okay for the imported package to not be referenced.
+The `init` function generated will be called after the `init` functions of all plugins referenced due to package initialization order.
+
+And that's how we integrate plugins into our build!
 Now, create the `flake.lock`, check in everything, and run it:
 
 {% highlight bash %}
 nix flake update
 git add flake.* go.mod main.go
 git commit -a -m "initial commit"
-nix run
+{% include_relative command.bash %}
 {% endhighlight %}
 
 (Committing is optional, but saves us from a warning that the repository is dirty.)
 This should give us:
 
 {% highlight plain %}
-Hello, world!
-The following plugins are available: []
+{% include_relative expected_output.txt %}
 {% endhighlight %}
 
-Let's recap what we have here:
-
- * Our flake supplies the function `lib.buildApp`.
- * That function builds our app from the supplied `pkgs` and a list of `plugins`.
-   The plugin list isn't used for anything yet during the build.
- * Our flake also supplies a package built with `buildApp` with an empty plugin list.
