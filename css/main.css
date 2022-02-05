@@ -95,14 +95,14 @@ nav > ul > li > a {
 nav > ul > li.heading {
   padding: .5em .75em;
   font-weight: bold;
-  color: var(--colot-text-dark);
+  color: var(--color-text-dark);
 }
 
 nav > ul > li.active > a {
   background-color: var(--color-light);
 }
 
-nav > ul > li.child > a {
+nav > ul > li.child > a.part {
   padding-left: 2em;
 }
 
@@ -139,15 +139,6 @@ article {
 article a {
   display: inline-block;
   color: inherit;
-  text-decoration: inherit;
-}
-
-article a::first-letter {
-  text-decoration: underline;
-}
-
-article a:hover,
-article a:active {
   text-decoration: underline;
 }
 
@@ -158,12 +149,23 @@ article > header {
   margin: 0 0 1em 0;
 }
 
-article > header > h1 {
+article > header > div {
   flex: 1 1 auto;
+  margin: 0;
+  padding: .125em;
+}
+
+article > header > div > span.parent {
+  margin: 0;
+  padding: 0;
+  display: block;
+}
+
+article > header > div > h1 {
   font-size: x-large;
   font-weight: bold;
   margin: 0;
-  padding: .125em 0;
+  padding: 0;
   line-height: 150%;
 }
 
@@ -172,10 +174,33 @@ article > header > span.date {
   text-align: right;
   font-size: small;
   display: inline-block;
+  padding: .125em;
 }
 
 article > p.updated {
   font-size: small;
+}
+
+article > .navigator {
+  position: relative;
+  height: 2.5em;
+}
+
+article > .navigator > a {
+  text-decoration: none;
+  background-color: var(--color-medium);
+  box-shadow: 3px 3px 5px var(--color-dark);
+  padding: .25em .5em;
+  position: absolute;
+  top: .25em;
+}
+
+article > .navigator > a.prev {
+  left: 0;
+}
+
+article > .navigator > a.next {
+  right: 0;
 }
 
 article h2 {
@@ -265,4 +290,9 @@ section.projects > a > p {
 
 code {
   hyphens: none;
+  tab-size: 2;
+}
+
+*:not(pre) > code {
+  white-space: nowrap;
 }

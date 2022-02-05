@@ -24,9 +24,17 @@
         <li class="heading">Articles</li>
         {% assign articles = site.pages | where:"kind","article" | sort:"weight" %}
         {% for a in articles %}
-        <li class="child{% if a.url == page.url %} active{% endif %}">
-          <a href="{{ a.url }}">{{ a.title_short }}</a>
-        </li>
+        {% if a.part %}
+          {% if a.title == page.title %}
+            <li class="child{% if a.url == page.url %} active{% endif %}">
+              <a href="{{ a.url }}" class="part">Part {{ a.part }}</a>
+            </li>
+          {% endif %}
+        {% else %}
+          <li class="child{% if a.url == page.url %} active{% endif %}">
+            <a href="{{ a.url }}">{{ a.title_short }}</a>  
+          </li>
+        {% endif %}
         {% endfor %}
         <li class="heading">Legacy</li>
         {% assign legacy = site.pages | where:"kind","legacy" | sort:"weight" %}
@@ -50,7 +58,14 @@
     <main>
       <article>
         <header>
-          <h1>{{ page.title }}</h1>
+          <div>
+            {% if page.parttitle %}
+              <span class="parent">{{ page.title }}</span>
+              <h1>Part {{ page.part }}: {{ page.parttitle }}</h1>
+            {% else %}
+              <h1>{{ page.title }}</h1>
+            {% endif %}
+          </div>
           <span class="date">{{ page.date }}</span>
         </header>
         
@@ -58,7 +73,11 @@
         <p class="updated">Last updated {{ page.updated }}, see <a href="#changelog">Changelog</a></p>
         {%- endif %}
   
+        {% include navigator.liquid %}
+  
         {{ content }}
+        
+        {% include navigator.liquid %}
       </article>
     </main>
     <script>
