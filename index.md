@@ -14,8 +14,8 @@ Here are some of my open source projects:
 
 <section class="projects">
   <a href="https://nyarna.org/">
-    <h3>Nyarna</a>
-    <p>LaTeX-Like Markup Language</a>
+    <h3>Nyarna</h3>
+    <p>LaTeX-Like Markup Language</p>
   </a>
   <a href="https://flyx.github.io/OpenGLAda/">
     <h3>OpenGLAda</h3>
