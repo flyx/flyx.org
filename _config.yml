@@ -11,6 +11,13 @@ description: >-
 baseurl: ""
 url: "https://flyx.org/"
 github_username: flyx
+exclude:
+  - flake.nix
+  - flake.lock
+  - result
+  - .git
+  - _site
+  
 
 # Exclude from processing.
 # The following items will not be processed, by default.

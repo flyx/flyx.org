@@ -13,6 +13,10 @@ I write parsers, compilers, and sometimes other stuff.
 Here are some of my open source projects:
 
 <section class="projects">
+  <a href="https://nyarna.org/">
+    <h3>Nyarna</a>
+    <p>LaTeX-Like Markup Language</a>
+  </a>
   <a href="https://flyx.github.io/OpenGLAda/">
     <h3>OpenGLAda</h3>
     <p>Thick Ada binding for OpenGL</p>
