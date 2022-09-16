@@ -252,6 +252,12 @@ figure.highlight {
   }
 }
 
+p code {
+  border-radius: .25em;
+  padding: .125em .33em;
+  background-color: #333;
+}
+
 figure.highlight pre {
   border-radius: .5em;
   padding: .5em;

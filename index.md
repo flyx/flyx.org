@@ -17,17 +17,17 @@ Here are some of my open source projects:
     <h3>Nyarna</h3>
     <p>LaTeX-Like Markup Language</p>
   </a>
-  <a href="https://flyx.github.io/OpenGLAda/">
-    <h3>OpenGLAda</h3>
-    <p>Thick Ada binding for OpenGL</p>
+  <a href="https://github.com/flyx/Zicross">
+    <h3>Zicross</h3>
+    <p>Cross-Packaging Nix toolkit</p>
   </a>
   <a href="https://nimyaml.org/">
     <h3>NimYAML</h3>
     <p>YAML 1.2 implementation in Nim</p>
   </a>
-  <a href="https://ada.yaml.io/">
-    <h3>AdaYAML</h3>
-    <p>Experimental YAML implementation in Ada</p>
+  <a href="https://flyx.github.io/DSA-4.1-Heldendokument/">
+    <h3>DSA 4.1 Heldendokument</h3>
+    <p>German character sheet in LuaLaTeX</p>
   </a>
 </section>
 
