@@ -7,7 +7,7 @@ weight: 1
 kind: main
 ---
 
-I am a hacker and a pen & paper enthusiast.
+I am a code wizard and a pen & paper enthusiast.
 
 I write parsers, compilers, and sometimes other stuff.
 Here are some of my open source projects:
@@ -31,6 +31,6 @@ Here are some of my open source projects:
   </a>
 </section>
 
-You can contact me via [Matrix](https://matrix.org/): `@flyx:flyx.org`
+You can contact me via [Matrix](https://matrix.org/): `@flyx:klacker.eu`
 
-Or write me an [email](/email).
+Or write an [email](/email).
