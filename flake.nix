@@ -1,7 +1,7 @@
 {
   description = "flyx.org Website";
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     utils.url = "github:numtide/flake-utils";
     go-plugins.url = "github:flyx/nix-flakes-go-plugins";
     go-plugins.inputs = {
